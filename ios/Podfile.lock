@@ -40,7 +40,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLogBox (55.0.7):
     - React-Core
-  - ExpoModulesCore (55.0.15):
+  - ExpoModulesCore (55.0.17):
     - ExpoModulesJSI
     - hermes-engine
     - RCTRequired
@@ -64,12 +64,12 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoModulesJSI (55.0.15):
+  - ExpoModulesJSI (55.0.17):
     - hermes-engine
     - React-Core
     - React-runtimescheduler
     - ReactCommon
-  - ExpoSecureStore (55.0.8):
+  - ExpoSecureStore (55.0.9):
     - ExpoModulesCore
   - FBLazyVector (0.83.2)
   - hermes-engine (0.14.1):
@@ -2297,9 +2297,9 @@ SPEC CHECKSUMS:
   ExpoFont: 4d2a6dedce012c4793532cb38d561d3da95eaafd
   ExpoKeepAwake: 55711a70fe88a41e793bbe28543c93cb47ff265d
   ExpoLogBox: 35febda08748ff213ea133f51acf976ba8c44b2c
-  ExpoModulesCore: e65cbfabd7646c8192fba0abd5953f16fc994c4c
-  ExpoModulesJSI: 272e71466f386b52c1b26d065342e9479f84adfe
-  ExpoSecureStore: 7837b892a89ad8d28b64d9302b657e8b6ebae250
+  ExpoModulesCore: 2494e5ad9b09f93e73d085576caa2d61668f258f
+  ExpoModulesJSI: de2f4c13ffbf3c92654be2f237d71700bb702514
+  ExpoSecureStore: 25cd1fed833427c6ebf915f7c82651256da6745e
   FBLazyVector: 32e9ed0301d0fcbc1b2b341dd7fcbf291f51eb83
   hermes-engine: 741d91fdfa530109da4d7a2955825dcd8fa9ec5c
   RCTDeprecation: a522c536d2c7be8f518dd834883cf6dce1d4f545
@@ -2378,6 +2378,6 @@ SPEC CHECKSUMS:
   RNScreens: fb11b7412bcbdc0ffafcaf9174938d998d4e2bc4
   Yoga: dd994d8c85dca5cc9b10f5df8c01f9ef1d0da191
 
-PODFILE CHECKSUM: 88194c9e1477d4a6d7f207006d9aa74faf446510
+PODFILE CHECKSUM: a11238f44ff16d0d33ae33d4e1ae6ec510b8d090
 
 COCOAPODS: 1.15.2

@@ -34,6 +34,9 @@
         "projectId": "5b21a603-9782-43d0-ab6d-dfeee96622ba"
       }
     },
-    "owner": "mahfod"
+    "owner": "mahfod",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
