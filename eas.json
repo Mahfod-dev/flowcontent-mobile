@@ -13,6 +13,9 @@
     },
     "preview": {
       "distribution": "store",
+      "ios": {
+        "image": "macos-sonoma-14.6-xcode-15.4"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
       }
