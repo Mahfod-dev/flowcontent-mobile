@@ -20,6 +20,14 @@
         "simulator": false
       }
     },
+    "simulator": {
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": {
