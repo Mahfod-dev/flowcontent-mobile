@@ -3,9 +3,9 @@
 ## 1. ~~Typewriter effect trop rapide~~ ✅
 - Ralenti de 4chars/12ms → 2chars/20ms
 
-## 2. Filtre par suite (comme le frontend) ⏳ backend requis
-- Ajouter un filtre/sélecteur de suite dans la sidebar ou le chat
-- Nécessite d'abord un lien session↔domaine côté backend
+## 2. Filtre par site (comme le frontend) ⏳ backend requis
+- Ajouter un filtre/sélecteur de site dans la sidebar ou le chat
+- Nécessite d'abord un lien session↔site côté backend
 
 ## 3. Barre de recherche conversations
 - Ajouter une barre de recherche dans la sidebar pour chercher parmi les conversations

@@ -14,6 +14,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBubble } from '../components/MessageBubble';
 import { ToolActivity } from '../components/ToolActivity';
@@ -32,7 +33,30 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Speech-to-text
+  useSpeechRecognitionEvent('start', () => setIsListening(true));
+  useSpeechRecognitionEvent('end', () => setIsListening(false));
+  useSpeechRecognitionEvent('result', (event) => {
+    const text = event.results[0]?.transcript;
+    if (text) setInput((prev) => prev + (prev ? ' ' : '') + text);
+  });
+
+  const handleMic = async () => {
+    if (isListening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!granted) {
+      Alert.alert('Permission micro refusée', 'Activez le micro dans les réglages.');
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    ExpoSpeechRecognitionModule.start({ lang: 'fr-FR', interimResults: false, continuous: false });
+  };
 
   const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls } = useChat(
     sessionId ?? '',
@@ -225,6 +249,12 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
           maxLength={4000}
           onSubmitEditing={handleSend}
         />
+        <TouchableOpacity
+          style={[styles.micBtn, isListening && styles.micBtnActive]}
+          onPress={handleMic}
+        >
+          <Text style={styles.micIcon}>{isListening ? '⏹' : '🎤'}</Text>
+        </TouchableOpacity>
         {isTyping ? (
           <TouchableOpacity style={styles.stopBtn} onPress={cancelRun}>
             <Text style={styles.stopIcon}>■</Text>
@@ -300,6 +330,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 120,
     borderWidth: 1, borderColor: '#4338CA',
   },
+  micBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  micBtnActive: { backgroundColor: '#EF4444' },
+  micIcon: { fontSize: 18 },
   sendBtn: { backgroundColor: '#6366F1', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled: { backgroundColor: '#312E81' },
   sendIcon: { color: '#fff', fontSize: 20, fontWeight: '700' },
