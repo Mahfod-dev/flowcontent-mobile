@@ -15,10 +15,6 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
-      },
-      "ios": {
-        "simulator": false,
-        "distribution": "store"
       }
     },
     "simulator": {
