@@ -1,3 +1,11 @@
+export interface MediaAttachment {
+  type: 'document' | 'image';
+  url: string;
+  mimeType: string;
+  filename: string;
+  storagePath?: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -5,6 +13,7 @@ export interface Message {
   timestamp: Date;
   isThinking?: boolean;
   isStreaming?: boolean;
+  attachments?: MediaAttachment[];
 }
 
 export interface Session {

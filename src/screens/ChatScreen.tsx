@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -11,12 +12,15 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBubble } from '../components/MessageBubble';
 import { ToolActivity } from '../components/ToolActivity';
 import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { apiService } from '../services/api';
+import { MediaAttachment } from '../types';
 
 interface ChatScreenProps {
   sessionId: string | null;
@@ -26,6 +30,8 @@ interface ChatScreenProps {
 export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const { user } = useAuth();
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls } = useChat(
@@ -44,10 +50,68 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() && attachments.length === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(input.trim());
+    sendMessage(input.trim(), attachments.length > 0 ? attachments : undefined);
     setInput('');
+    setAttachments([]);
+  };
+
+  const handlePickFile = () => {
+    Alert.alert('Ajouter un fichier', '', [
+      {
+        text: 'Photo / Galerie',
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+          });
+          if (result.canceled || !result.assets?.[0]) return;
+          const asset = result.assets[0];
+          await uploadFile(asset.uri, asset.fileName || 'image.jpg', asset.mimeType || 'image/jpeg');
+        },
+      },
+      {
+        text: 'Document (PDF, DOCX...)',
+        onPress: async () => {
+          const result = await DocumentPicker.getDocumentAsync({
+            type: [
+              'application/pdf',
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              'text/plain',
+              'text/markdown',
+              'text/csv',
+              'application/json',
+            ],
+            copyToCacheDirectory: true,
+          });
+          if (result.canceled || !result.assets?.[0]) return;
+          const asset = result.assets[0];
+          await uploadFile(asset.uri, asset.name, asset.mimeType || 'application/octet-stream');
+        },
+      },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
+  };
+
+  const uploadFile = async (uri: string, name: string, mimeType: string) => {
+    if (!user?.token) return;
+    setUploading(true);
+    try {
+      const data = await apiService.uploadFile(user.token, uri, name, mimeType);
+      if (data.attachment) {
+        setAttachments((prev) => [...prev, data.attachment]);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      Alert.alert('Erreur upload', err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleFeedback = useCallback(
@@ -126,8 +190,31 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         </View>
       )}
 
+      {/* Attachment preview */}
+      {attachments.length > 0 && (
+        <View style={styles.attachmentBar}>
+          {attachments.map((att, i) => (
+            <View key={i} style={styles.attachmentChip}>
+              <Text style={styles.attachmentName} numberOfLines={1}>
+                {att.filename}
+              </Text>
+              <TouchableOpacity onPress={() => removeAttachment(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.attachmentRemove}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Input */}
       <View style={styles.inputRow}>
+        <TouchableOpacity style={styles.attachBtn} onPress={handlePickFile} disabled={uploading}>
+          {uploading ? (
+            <ActivityIndicator size="small" color="#6366F1" />
+          ) : (
+            <Text style={styles.attachIcon}>+</Text>
+          )}
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           placeholder="Écrivez un message..."
@@ -144,9 +231,9 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+            style={[styles.sendBtn, (!input.trim() && attachments.length === 0) && styles.sendBtnDisabled]}
             onPress={handleSend}
-            disabled={!input.trim()}>
+            disabled={!input.trim() && attachments.length === 0}>
             <Text style={styles.sendIcon}>↑</Text>
           </TouchableOpacity>
         )}
@@ -186,6 +273,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B', borderTopWidth: 1, borderTopColor: '#312E81',
   },
   thinkingText: { color: '#A5B4FC', fontSize: 12, flex: 1 },
+  attachmentBar: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    paddingHorizontal: 12, paddingTop: 8,
+    backgroundColor: '#1E1B4B', borderTopWidth: 1, borderTopColor: '#312E81',
+  },
+  attachmentChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#312E81', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6, maxWidth: 200,
+  },
+  attachmentName: { color: '#A5B4FC', fontSize: 12, flex: 1 },
+  attachmentRemove: { color: '#EF4444', fontSize: 14, fontWeight: '700' },
+  attachBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#312E81', justifyContent: 'center', alignItems: 'center',
+  },
+  attachIcon: { color: '#A5B4FC', fontSize: 22, fontWeight: '600' },
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8,
     paddingHorizontal: 12, paddingVertical: 10,

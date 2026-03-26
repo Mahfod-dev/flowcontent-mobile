@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { socketService } from '../services/socket';
 import { apiService } from '../services/api';
-import { Message, ToolCall } from '../types';
+import { MediaAttachment, Message, ToolCall } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
@@ -250,25 +250,30 @@ export function useChat(sessionId: string, userId: string) {
 
   // Send message via HTTP (triggers stream via WebSocket)
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || !sessionId) return;
+    async (text: string, media?: MediaAttachment[]) => {
+      if ((!text.trim() && !media?.length) || !sessionId) return;
       stopTypewriter();
+      const displayText = media?.length
+        ? `${text}${text ? '\n' : ''}${media.map((a) => `📎 ${a.filename}`).join('\n')}`
+        : text;
       setMessages((prev) => [
         ...prev,
-        { id: `u-${Date.now()}`, role: 'user', content: text, timestamp: new Date() },
+        { id: `u-${Date.now()}`, role: 'user', content: displayText, timestamp: new Date(), attachments: media },
       ]);
       setIsTyping(true);
 
       try {
         const token = tokenRef.current;
         if (!token) throw new Error('Non authentifié');
+        const body: any = { message: text };
+        if (media?.length) body.media = media;
         const res = await fetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify(body),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));

@@ -102,6 +102,26 @@ export const apiService = {
     };
   },
 
+  async uploadFile(token: string, fileUri: string, fileName: string, mimeType: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: fileUri,
+      name: fileName,
+      type: mimeType,
+    } as any);
+    const res = await fetch(`${API_URL}/api/fc-agent/files/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (res.status === 401 && _onTokenExpired) _onTokenExpired();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Upload failed (${res.status})`);
+    }
+    return res.json();
+  },
+
   async submitFeedback(token: string, sessionId: string, messageIndex: number, rating: 'up' | 'down'): Promise<boolean> {
     const res = await authFetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/feedback`, token, {
       method: 'POST',

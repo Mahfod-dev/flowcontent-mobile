@@ -47,3 +47,8 @@
 
 ## 14. Swipe actions sur les conversations
 - Swipe gauche pour supprimer, swipe droite pour épingler une conversation
+
+## 15. Upload de fichiers dans le chat
+- Permettre d'envoyer des fichiers (PDF, images, DOCX, etc.) dans le chat comme sur le frontend
+- Picker natif pour photos/galerie + fichiers (DocumentPicker)
+- Le backend doit supporter l'upload et le traitement des fichiers joints
