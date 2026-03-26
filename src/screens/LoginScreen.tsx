@@ -1,0 +1,105 @@
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../contexts/AuthContext';
+
+export function LoginScreen() {
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Renseignez votre email et mot de passe');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await login(email.trim().toLowerCase(), password);
+    } catch (err: any) {
+      setError(err.message || 'Connexion échouée');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.card}>
+        <Text style={styles.logo}>⚡ FlowContent</Text>
+        <Text style={styles.subtitle}>Connectez-vous à votre assistant IA</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#6B7280"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Mot de passe"
+          placeholderTextColor="#6B7280"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Se connecter</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0F0E17' },
+  flex: { flex: 1, justifyContent: 'center', padding: 24 },
+  card: { backgroundColor: '#1E1B4B', borderRadius: 20, padding: 28, gap: 16 },
+  logo: { color: '#fff', fontSize: 28, fontWeight: '800', textAlign: 'center' },
+  subtitle: { color: '#A5B4FC', fontSize: 14, textAlign: 'center', marginBottom: 8 },
+  input: {
+    backgroundColor: '#312E81',
+    color: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#4338CA',
+  },
+  error: { color: '#F87171', fontSize: 13, textAlign: 'center' },
+  button: {
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+});
