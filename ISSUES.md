@@ -3,52 +3,50 @@
 ## 1. ~~Typewriter effect trop rapide~~ ✅
 - Ralenti de 4chars/12ms → 2chars/20ms
 
-## 2. Filtre par site (comme le frontend) ⏳ backend requis
-- Ajouter un filtre/sélecteur de site dans la sidebar ou le chat
-- Nécessite d'abord un lien session↔site côté backend
+## 2. ~~Filtre par site~~ ✅
+- Site switcher chips dans la sidebar (GET /site-domains)
 
-## 3. Barre de recherche conversations
-- Ajouter une barre de recherche dans la sidebar pour chercher parmi les conversations
+## 3. ~~Barre de recherche conversations~~ ✅
+- Barre de recherche dans la sidebar
 
-## 4. Connexion Google ⏳ backend requis
+## 4. Connexion Google
 - Ajouter le login via Google (OAuth) en plus de l'email/password
+- Backend déjà prêt (google-auth module)
 
-## 5. Upgrade / Paiement ⏳ backend requis
-- Permettre à l'utilisateur de gérer son abonnement / upgrader son plan depuis l'app
+## 5. Upgrade / Paiement
+- Permettre à l'utilisateur de gérer son abonnement depuis l'app
+- Backend: credits module existant
 
-## 6. Connecteurs (intégrations) ⏳ backend requis
-- Permettre à l'utilisateur de connecter ses comptes (réseaux sociaux, etc.) comme sur le frontend web
-- Sur mobile c'est potentiellement plus simple (OAuth natif, partage système, etc.)
+## 6. ~~Connecteurs (intégrations)~~ ✅ (affichage)
+- Liste des intégrations connectées visible dans le profil
+- OAuth flow à implémenter plus tard (nécessite WebView)
 
-## 7. Gestion de médias (dossier) ⏳ backend requis
-- Permettre à l'utilisateur de stocker/organiser ses images, vidéos et autres fichiers dans des dossiers
-- Bibliothèque de contenus générés accessible depuis l'app
+## 7. Gestion de médias (dossier)
+- Permettre de stocker/organiser ses images, vidéos et fichiers dans des dossiers
 
-## 8. Notifications push ⏳ backend requis
-- Notifier l'utilisateur quand une tâche/génération est terminée
-- Même si l'app est en arrière-plan ou fermée
+## 8. ~~Notifications~~ ✅
+- Écran notifications complet avec badge, priorités, mark read
+- Badge compteur dans la sidebar
 
-## 9. Entrée vocale (speech-to-text)
-- L'utilisateur parle à l'app et sa voix est retranscrite en texte dans le champ de message
-- Plus rapide et pratique sur mobile
+## 9. ~~Entrée vocale (speech-to-text)~~ ✅
+- Bouton micro dans le chat, reconnaissance vocale FR
 
-## 10. Profil utilisateur (user.md) ⏳ backend requis
-- Permettre de modifier son user.md (profil agent : ton, style, infos sur l'utilisateur, préférences de contenu)
-- L'agent utilise ce profil pour personnaliser ses réponses et le contenu généré
+## 10. ~~Profil utilisateur~~ ✅
+- Écran profil avec édition (nom, site, entreprise, bio)
+- Affichage des intégrations connectées
 
-## 11. ~~Copier / Partager le contenu~~ ✅ (déjà implémenté)
-- Long press → copie. Ajouter le partage natif (Share sheet)
+## 11. ~~Copier / Partager le contenu~~ ✅
+- Long press → menu Copier / Partager (Share sheet natif)
 
-## 12. ~~Rendu Markdown dans les messages~~ ✅ (déjà implémenté)
-- react-native-markdown-display avec styles complets
+## 12. ~~Rendu Markdown~~ ✅ (déjà implémenté)
 
-## 13. Haptic feedback
-- Vibrations subtiles sur les actions (envoi message, nouvelle réponse, etc.) pour un feel plus natif
+## 13. ~~Haptic feedback~~ ✅
+- Vibrations sur envoi, copie, long press
 
 ## 14. Swipe actions sur les conversations
-- Swipe gauche pour supprimer, swipe droite pour épingler une conversation
+- Swipe gauche supprimer ✅ (déjà fait)
+- Swipe droite épingler (à faire)
 
-## 15. Upload de fichiers dans le chat
-- Permettre d'envoyer des fichiers (PDF, images, DOCX, etc.) dans le chat comme sur le frontend
-- Picker natif pour photos/galerie + fichiers (DocumentPicker)
-- Le backend doit supporter l'upload et le traitement des fichiers joints
+## 15. ~~Upload de fichiers~~ ✅
+- Bouton "+" → Photo/Galerie ou Document (PDF, DOCX, etc.)
+- Upload vers backend + envoi avec le message
