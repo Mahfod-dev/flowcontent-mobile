@@ -6,3 +6,4 @@ dist/
 *.env.production
 .p8
 credentials.json
+*.p8
