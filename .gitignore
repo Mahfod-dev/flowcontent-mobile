@@ -4,3 +4,5 @@ dist/
 .env
 *.env.local
 *.env.production
+.p8
+credentials.json
