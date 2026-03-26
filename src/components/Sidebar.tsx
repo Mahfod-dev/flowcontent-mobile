@@ -87,6 +87,13 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
   const [credits, setCredits] = useState<{ balance: number; free: number } | null>(null);
   const [renameModal, setRenameModal] = useState<Session | null>(null);
   const [renameText, setRenameText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredSessions = searchQuery.trim()
+    ? sessions.filter((s) =>
+        (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : sessions;
 
   const loadSessions = useCallback(async () => {
     if (!user?.token) return;
@@ -227,6 +234,18 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
         <Text style={styles.newChatText}>Nouvelle conversation</Text>
       </TouchableOpacity>
 
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Rechercher..."
+          placeholderTextColor="#6B7280"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+        />
+      </View>
+
       {/* Conversations list */}
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -234,7 +253,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
         </View>
       ) : (
         <FlatList
-          data={sessions}
+          data={filteredSessions}
           keyExtractor={(item) => item.id}
           renderItem={renderSession}
           contentContainerStyle={styles.list}
@@ -330,6 +349,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  searchContainer: {
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  searchInput: {
+    backgroundColor: '#1E1B4B',
+    color: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#312E81',
   },
   loadingContainer: {
     flex: 1,

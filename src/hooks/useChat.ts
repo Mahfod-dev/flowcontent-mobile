@@ -6,8 +6,8 @@ import { Message, ToolCall } from '../types';
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
 // Typewriter speed: characters per chunk & interval
-const TYPEWRITER_CHUNK = 4;
-const TYPEWRITER_MS = 12;
+const TYPEWRITER_CHUNK = 2;
+const TYPEWRITER_MS = 20;
 
 export function useChat(sessionId: string, userId: string) {
   const [messages, setMessages] = useState<Message[]>([]);

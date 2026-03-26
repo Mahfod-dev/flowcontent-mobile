@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBubble } from '../components/MessageBubble';
 import { ToolActivity } from '../components/ToolActivity';
@@ -44,6 +45,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
 
   const handleSend = () => {
     if (!input.trim()) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     sendMessage(input.trim());
     setInput('');
   };

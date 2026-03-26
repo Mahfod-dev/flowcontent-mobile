@@ -16,6 +16,7 @@
     "babel-preset-expo": "~55.0.8",
     "expo": "^55.0.6",
     "expo-clipboard": "~55.0.9",
+    "expo-haptics": "~55.0.9",
     "expo-modules-core": "^55.0.17",
     "expo-secure-store": "~55.0.9",
     "expo-status-bar": "~55.0.4",

@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { Message } from '../types';
 
@@ -18,8 +19,29 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(message.content);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleLongPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Message',
+      '',
+      [
+        { text: 'Copier', onPress: handleCopy },
+        {
+          text: 'Partager',
+          onPress: async () => {
+            try {
+              await Share.share({ message: message.content });
+            } catch {}
+          },
+        },
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    );
   };
 
   const handleFeedback = (rating: 'up' | 'down') => {
@@ -36,7 +58,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
       <View style={styles.bubbleWrap}>
         <TouchableOpacity
           style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}
-          onLongPress={handleCopy}
+          onLongPress={handleLongPress}
           activeOpacity={0.8}
         >
           {isUser ? (
