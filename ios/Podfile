@@ -60,15 +60,15 @@ target 'FlowContent' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
-    # Fix Swift 6 strict concurrency errors with Xcode 16.4+
+    # Fix Swift 6 strict concurrency errors
     installer.pods_project.build_configurations.each do |config|
       config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
-      config.build_settings['SWIFT_VERSION'] = '6.0'
     end
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
-        config.build_settings['SWIFT_VERSION'] = '6.0'
+        config.build_settings['SWIFT_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+        config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
       end
     end
   end
