@@ -16,13 +16,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import { Session } from '../types';
+import { Session, SiteDomain } from '../types';
 
 interface SidebarProps {
   activeSessionId: string | null;
   onSelectSession: (session: Session) => void;
   onNewChat: () => void;
   onClose: () => void;
+  onOpenNotifications?: () => void;
+  onOpenProfile?: () => void;
 }
 
 function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
@@ -78,7 +80,7 @@ function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: 
   );
 }
 
-export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }: SidebarProps) {
+export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile }: SidebarProps) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -88,6 +90,9 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
   const [renameModal, setRenameModal] = useState<Session | null>(null);
   const [renameText, setRenameText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sites, setSites] = useState<SiteDomain[]>([]);
+  const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
+  const [notifCount, setNotifCount] = useState(0);
 
   const filteredSessions = searchQuery.trim()
     ? sessions.filter((s) =>
@@ -111,10 +116,12 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
     loadSessions();
   }, [loadSessions]);
 
-  // Load credits
+  // Load credits, sites, notification badge
   useEffect(() => {
     if (!user?.token) return;
     apiService.getCredits(user.token).then(setCredits).catch(() => {});
+    apiService.getSiteDomains(user.token).then(setSites).catch(() => {});
+    apiService.getNotificationBadge(user.token).then((b) => setNotifCount(b.unread)).catch(() => {});
   }, [user?.token]);
 
   const handleRefresh = useCallback(async () => {
@@ -234,6 +241,29 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
         <Text style={styles.newChatText}>Nouvelle conversation</Text>
       </TouchableOpacity>
 
+      {/* Site switcher */}
+      {sites.length > 0 && (
+        <View style={styles.siteSwitcher}>
+          <TouchableOpacity
+            style={[styles.siteChip, !activeSiteId && styles.siteChipActive]}
+            onPress={() => setActiveSiteId(null)}
+          >
+            <Text style={[styles.siteChipText, !activeSiteId && styles.siteChipTextActive]}>Tous</Text>
+          </TouchableOpacity>
+          {sites.map((site) => (
+            <TouchableOpacity
+              key={site.id}
+              style={[styles.siteChip, activeSiteId === site.id && styles.siteChipActive]}
+              onPress={() => setActiveSiteId(activeSiteId === site.id ? null : site.id)}
+            >
+              <Text style={[styles.siteChipText, activeSiteId === site.id && styles.siteChipTextActive]} numberOfLines={1}>
+                {site.displayName || site.domain}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Search bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -279,6 +309,23 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose }
             <Text style={styles.creditsValue}>{credits.balance}</Text>
           </View>
         )}
+        <View style={styles.footerActions}>
+          {onOpenNotifications && (
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenNotifications}>
+              <Text style={styles.footerActionIcon}>🔔</Text>
+              {notifCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notifCount > 99 ? '99+' : notifCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+          {onOpenProfile && (
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenProfile}>
+              <Text style={styles.footerActionIcon}>👤</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <Text style={styles.userEmail} numberOfLines={1}>
           {user?.email || ''}
         </Text>
@@ -348,6 +395,34 @@ const styles = StyleSheet.create({
   newChatText: {
     color: '#fff',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  siteSwitcher: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  siteChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#1E1B4B',
+    borderWidth: 1,
+    borderColor: '#312E81',
+  },
+  siteChipActive: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  siteChipText: {
+    color: '#A5B4FC',
+    fontSize: 12,
+    maxWidth: 100,
+  },
+  siteChipTextActive: {
+    color: '#fff',
     fontWeight: '600',
   },
   searchContainer: {
@@ -446,6 +521,35 @@ const styles = StyleSheet.create({
   creditsValue: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  footerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 10,
+  },
+  footerActionBtn: {
+    position: 'relative',
+    padding: 6,
+  },
+  footerActionIcon: {
+    fontSize: 20,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '700',
   },
   userEmail: {

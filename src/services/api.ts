@@ -122,6 +122,62 @@ export const apiService = {
     return res.json();
   },
 
+  // Site Domains
+  async getSiteDomains(token: string): Promise<any[]> {
+    const res = await authFetch(`${API_URL}/api/site-domains`, token);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.sites ?? data ?? [];
+  },
+
+  // Notifications
+  async getNotificationBadge(token: string): Promise<{ unread: number; urgent: number }> {
+    const res = await authFetch(`${API_URL}/api/notifications/badge`, token);
+    if (!res.ok) return { unread: 0, urgent: 0 };
+    return res.json();
+  },
+
+  async getNotifications(token: string, limit = 50): Promise<any[]> {
+    const res = await authFetch(`${API_URL}/api/notifications?limit=${limit}`, token);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.notifications ?? data ?? [];
+  },
+
+  async markNotificationRead(token: string, id: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/notifications/${id}/read`, token, { method: 'POST' });
+    return res.ok;
+  },
+
+  async markAllNotificationsRead(token: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/notifications/read-all`, token, { method: 'POST' });
+    return res.ok;
+  },
+
+  // User Profile
+  async getProfile(token: string): Promise<any> {
+    const res = await authFetch(`${API_URL}/api/users/profile`, token);
+    if (!res.ok) return null;
+    return res.json();
+  },
+
+  async updateProfile(token: string, profile: Record<string, any>): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/users/profile`, token, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    });
+    return res.ok;
+  },
+
+  // Integrations
+  async getMyIntegrations(token: string): Promise<any[]> {
+    const res = await authFetch(`${API_URL}/api/integrations/my`, token);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.integrations ?? data ?? [];
+  },
+
   async submitFeedback(token: string, sessionId: string, messageIndex: number, rating: 'up' | 'down'): Promise<boolean> {
     const res = await authFetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/feedback`, token, {
       method: 'POST',

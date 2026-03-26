@@ -46,3 +46,26 @@ export interface StreamEvent {
   data: string | { content?: string; tool?: string };
   sessionId?: string;
 }
+
+export interface SiteDomain {
+  id: string;
+  domain: string;
+  displayName?: string;
+  siteType?: string;
+  isPrimary?: boolean;
+  status?: string;
+  faviconUrl?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  category: string;
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  action_url?: string;
+  action_label?: string;
+}

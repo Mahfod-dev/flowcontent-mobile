@@ -15,6 +15,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
+import { NotificationsScreen } from './src/screens/NotificationsScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { Sidebar } from './src/components/Sidebar';
 import { apiService } from './src/services/api';
 import { Session } from './src/types';
@@ -26,6 +28,7 @@ function AppContent() {
   const { user, isLoading, logout } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile'>('chat');
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
@@ -166,12 +169,18 @@ function AppContent() {
 
   return (
     <View style={styles.container} {...edgePanResponder.panHandlers}>
-      {/* Main chat content */}
-      <ChatScreen
-        key={sessionId}
-        sessionId={sessionId}
-        onOpenDrawer={openDrawer}
-      />
+      {/* Main content */}
+      {activeScreen === 'notifications' ? (
+        <NotificationsScreen onBack={() => setActiveScreen('chat')} />
+      ) : activeScreen === 'profile' ? (
+        <ProfileScreen onBack={() => setActiveScreen('chat')} />
+      ) : (
+        <ChatScreen
+          key={sessionId}
+          sessionId={sessionId}
+          onOpenDrawer={openDrawer}
+        />
+      )}
 
       {/* Overlay */}
       {drawerOpen && (
@@ -192,6 +201,8 @@ function AppContent() {
           onSelectSession={handleSelectSession}
           onNewChat={handleNewChat}
           onClose={closeDrawer}
+          onOpenNotifications={() => { closeDrawer(); setActiveScreen('notifications'); }}
+          onOpenProfile={() => { closeDrawer(); setActiveScreen('profile'); }}
         />
       </Animated.View>
     </View>
