@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   login: async () => {},
+  loginWithGoogle: async () => {},
   logout: () => {},
 });
 
@@ -33,12 +35,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     apiService.setOnTokenExpired(logout);
   }, [logout]);
 
-  // Restore session on app start — non-blocking, no API call to validate
+  // Restore session on app start — validate token with /api/auth/me
   useEffect(() => {
-    apiService.getToken().then((token) => {
+    apiService.getToken().then(async (token) => {
       if (token) {
-        socketService.connect(token);
-        setUser({ id: '', email: '', token });
+        try {
+          const profile = await apiService.getProfile(token);
+          if (profile) {
+            socketService.connect(token);
+            setUser({
+              id: profile.id || '',
+              email: profile.email || '',
+              name: profile.name,
+              token,
+            });
+          } else {
+            // Token invalid, clear it
+            await apiService.clearToken();
+          }
+        } catch {
+          await apiService.clearToken();
+        }
       }
       setIsLoading(false);
     });
@@ -59,13 +76,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     const data = await apiService.login(email, password);
     const { access_token, user: userData } = data;
+    if (!access_token) throw new Error('Pas de token dans la réponse');
     await apiService.saveToken(access_token);
     socketService.connect(access_token);
     setUser({ ...userData, token: access_token });
   };
 
+  const loginWithGoogle = async (idToken: string) => {
+    const data = await apiService.loginWithGoogle(idToken);
+    const token = data.token || data.access_token;
+    if (!token) throw new Error('Pas de token dans la réponse');
+    await apiService.saveToken(token);
+    socketService.connect(token);
+    const u = data.user || {};
+    setUser({ id: u.id || '', email: u.email || '', name: u.name, token });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

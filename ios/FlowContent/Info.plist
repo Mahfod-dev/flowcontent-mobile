@@ -73,5 +73,11 @@
 	<string>Automatic</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FlowContent utilise le micro pour la saisie vocale.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>FlowContent utilise la reconnaissance vocale pour transcrire vos messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FlowContent accède à vos photos pour les joindre aux messages.</string>
 </dict>
 </plist>

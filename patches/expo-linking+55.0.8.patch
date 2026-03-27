@@ -1,0 +1,12 @@
+diff --git a/node_modules/expo-linking/ios/ExpoLinkingRegistry.swift b/node_modules/expo-linking/ios/ExpoLinkingRegistry.swift
+index ad64e68..8690d80 100644
+--- a/node_modules/expo-linking/ios/ExpoLinkingRegistry.swift
++++ b/node_modules/expo-linking/ios/ExpoLinkingRegistry.swift
+@@ -1,6 +1,6 @@
+ typealias OnURLReceivedCallback = (URL) -> Void
+ 
+-class ExpoLinkingRegistry {
++final class ExpoLinkingRegistry: @unchecked Sendable {
+   static let shared = ExpoLinkingRegistry()
+   var initialURL: URL?
+ 

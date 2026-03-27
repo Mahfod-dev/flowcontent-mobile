@@ -13,10 +13,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import { Session, SiteDomain } from '../types';
+import { Credits, Session, SiteDomain } from '../types';
+
+const PINNED_KEY = 'fc_pinned_sessions';
 
 interface SidebarProps {
   activeSessionId: string | null;
@@ -25,12 +28,17 @@ interface SidebarProps {
   onClose: () => void;
   onOpenNotifications?: () => void;
   onOpenProfile?: () => void;
+  onOpenDashboard?: () => void;
+  onOpenUpgrade?: () => void;
+  onOpenMedia?: () => void;
 }
 
-function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+function SwipeableRow({ onDelete, onPin, isPinned, children }: { onDelete: () => void; onPin: () => void; isPinned: boolean; children: React.ReactNode }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const onDeleteRef = useRef(onDelete);
+  const onPinRef = useRef(onPin);
   onDeleteRef.current = onDelete;
+  onPinRef.current = onPin;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -39,20 +47,17 @@ function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: 
       onPanResponderMove: (_, gs) => {
         if (gs.dx < 0) {
           translateX.setValue(Math.max(gs.dx, -80));
+        } else if (gs.dx > 0) {
+          translateX.setValue(Math.min(gs.dx, 80));
         }
       },
       onPanResponderRelease: (_, gs) => {
         if (gs.dx < -50) {
-          Animated.spring(translateX, {
-            toValue: -80,
-            useNativeDriver: true,
-            bounciness: 0,
-          }).start();
+          Animated.spring(translateX, { toValue: -80, useNativeDriver: true, bounciness: 0 }).start();
+        } else if (gs.dx > 50) {
+          Animated.spring(translateX, { toValue: 80, useNativeDriver: true, bounciness: 0 }).start();
         } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
         }
       },
     })
@@ -60,6 +65,18 @@ function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: 
 
   return (
     <View style={styles.swipeContainer}>
+      {/* Pin action (swipe right) */}
+      <TouchableOpacity
+        style={styles.pinAction}
+        onPress={() => {
+          Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+          onPinRef.current();
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.pinActionText}>{isPinned ? 'Désépingler' : 'Épingler'}</Text>
+      </TouchableOpacity>
+      {/* Delete action (swipe left) */}
       <TouchableOpacity
         style={styles.deleteAction}
         onPress={() => {
@@ -80,25 +97,55 @@ function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: 
   );
 }
 
-export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile }: SidebarProps) {
+export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile, onOpenDashboard, onOpenUpgrade, onOpenMedia }: SidebarProps) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [credits, setCredits] = useState<{ balance: number; free: number } | null>(null);
+  const [credits, setCredits] = useState<Credits | null>(null);
   const [renameModal, setRenameModal] = useState<Session | null>(null);
   const [renameText, setRenameText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sites, setSites] = useState<SiteDomain[]>([]);
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [notifCount, setNotifCount] = useState(0);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
-  const filteredSessions = searchQuery.trim()
-    ? sessions.filter((s) =>
-        (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : sessions;
+  // Load pinned sessions from AsyncStorage
+  useEffect(() => {
+    AsyncStorage.getItem(PINNED_KEY).then((raw) => {
+      if (raw) {
+        try { setPinnedIds(new Set(JSON.parse(raw))); } catch {}
+      }
+    });
+  }, []);
+
+  const togglePin = useCallback(async (sessionId: string) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) next.delete(sessionId);
+      else next.add(sessionId);
+      AsyncStorage.setItem(PINNED_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  const filteredSessions = (() => {
+    let list = searchQuery.trim()
+      ? sessions.filter((s) =>
+          (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : sessions;
+    // Sort: pinned first, then by date
+    return [...list].sort((a, b) => {
+      const ap = pinnedIds.has(a.id) ? 1 : 0;
+      const bp = pinnedIds.has(b.id) ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      return new Date(b.last_message_at ?? b.created_at ?? 0).getTime() -
+        new Date(a.last_message_at ?? a.created_at ?? 0).getTime();
+    });
+  })();
 
   const loadSessions = useCallback(async () => {
     if (!user?.token) return;
@@ -170,10 +217,15 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
 
   const handleLongPress = useCallback(
     (session: Session) => {
+      const isPinned = pinnedIds.has(session.id);
       Alert.alert(
         session.title || 'Conversation',
         '',
         [
+          {
+            text: isPinned ? 'Désépingler' : 'Épingler',
+            onPress: () => togglePin(session.id),
+          },
           {
             text: 'Renommer',
             onPress: () => {
@@ -190,7 +242,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
         ]
       );
     },
-    [handleDelete]
+    [handleDelete, pinnedIds, togglePin]
   );
 
   const handleRename = useCallback(async () => {
@@ -209,17 +261,21 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
 
   const renderSession = ({ item }: { item: Session }) => {
     const isActive = item.id === activeSessionId;
+    const isPinned = pinnedIds.has(item.id);
     return (
-      <SwipeableRow onDelete={() => handleDelete(item)}>
+      <SwipeableRow onDelete={() => handleDelete(item)} onPin={() => togglePin(item.id)} isPinned={isPinned}>
         <TouchableOpacity
           style={[styles.sessionItem, isActive && styles.sessionActive]}
           onPress={() => onSelectSession(item)}
           onLongPress={() => handleLongPress(item)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.sessionTitle, isActive && styles.sessionTitleActive]} numberOfLines={1}>
-            {item.title || 'Conversation sans titre'}
-          </Text>
+          <View style={styles.sessionTitleRow}>
+            {isPinned && <Text style={styles.pinIcon}>📌</Text>}
+            <Text style={[styles.sessionTitle, isActive && styles.sessionTitleActive, isPinned && { flex: 1 }]} numberOfLines={1}>
+              {item.title || 'Conversation sans titre'}
+            </Text>
+          </View>
           {item.last_message_at && (
             <Text style={styles.sessionDate}>
               {new Date(item.last_message_at).toLocaleDateString('fr-FR', {
@@ -304,15 +360,19 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
         {credits && (
-          <View style={styles.creditsRow}>
-            <Text style={styles.creditsLabel}>Crédits</Text>
-            <Text style={styles.creditsValue}>{credits.balance}</Text>
-          </View>
+          <TouchableOpacity style={styles.creditsRow} onPress={onOpenUpgrade} activeOpacity={onOpenUpgrade ? 0.7 : 1}>
+            <Text style={styles.creditsLabel}>Crédits · {credits.plan}</Text>
+            <View style={styles.creditsRight}>
+              <Text style={styles.creditsValue}>{credits.total_available}</Text>
+              {onOpenUpgrade && <Text style={styles.creditsChevron}>{'\u203A'}</Text>}
+            </View>
+          </TouchableOpacity>
         )}
         <View style={styles.footerActions}>
           {onOpenNotifications && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenNotifications}>
               <Text style={styles.footerActionIcon}>🔔</Text>
+              <Text style={styles.footerActionLabel}>Notifs</Text>
               {notifCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{notifCount > 99 ? '99+' : notifCount}</Text>
@@ -320,9 +380,28 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               )}
             </TouchableOpacity>
           )}
+          {onOpenDashboard && (
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenDashboard}>
+              <Text style={styles.footerActionIcon}>📊</Text>
+              <Text style={styles.footerActionLabel}>Stats</Text>
+            </TouchableOpacity>
+          )}
+          {onOpenUpgrade && (
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenUpgrade}>
+              <Text style={styles.footerActionIcon}>💎</Text>
+              <Text style={styles.footerActionLabel}>Abo</Text>
+            </TouchableOpacity>
+          )}
+          {onOpenMedia && (
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenMedia}>
+              <Text style={styles.footerActionIcon}>📁</Text>
+              <Text style={styles.footerActionLabel}>Fichiers</Text>
+            </TouchableOpacity>
+          )}
           {onOpenProfile && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenProfile}>
               <Text style={styles.footerActionIcon}>👤</Text>
+              <Text style={styles.footerActionLabel}>Profil</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -456,6 +535,21 @@ const styles = StyleSheet.create({
   swipeContent: {
     backgroundColor: '#0D0B1A',
   },
+  pinAction: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pinActionText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   deleteAction: {
     position: 'absolute',
     right: 0,
@@ -474,6 +568,14 @@ const styles = StyleSheet.create({
   sessionItem: {
     paddingVertical: 12,
     paddingHorizontal: 12,
+  },
+  sessionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pinIcon: {
+    fontSize: 12,
   },
   sessionActive: {
     backgroundColor: '#1E1B4B',
@@ -523,17 +625,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  creditsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  creditsChevron: {
+    color: '#6B7280',
+    fontSize: 18,
+    fontWeight: '600',
+  },
   footerActions: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 4,
     marginBottom: 10,
   },
   footerActionBtn: {
     position: 'relative',
-    padding: 6,
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
   footerActionIcon: {
     fontSize: 20,
+  },
+  footerActionLabel: {
+    color: '#6B7280',
+    fontSize: 10,
+    marginTop: 2,
   },
   badge: {
     position: 'absolute',

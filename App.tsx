@@ -17,6 +17,9 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { NotificationsScreen } from './src/screens/NotificationsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { DashboardScreen } from './src/screens/DashboardScreen';
+import { UpgradeScreen } from './src/screens/UpgradeScreen';
+import { MediaScreen } from './src/screens/MediaScreen';
 import { Sidebar } from './src/components/Sidebar';
 import { apiService } from './src/services/api';
 import { Session } from './src/types';
@@ -28,7 +31,7 @@ function AppContent() {
   const { user, isLoading, logout } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile'>('chat');
+  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media'>('chat');
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
@@ -174,6 +177,12 @@ function AppContent() {
         <NotificationsScreen onBack={() => setActiveScreen('chat')} />
       ) : activeScreen === 'profile' ? (
         <ProfileScreen onBack={() => setActiveScreen('chat')} />
+      ) : activeScreen === 'dashboard' ? (
+        <DashboardScreen onBack={() => setActiveScreen('chat')} />
+      ) : activeScreen === 'upgrade' ? (
+        <UpgradeScreen onBack={() => setActiveScreen('chat')} />
+      ) : activeScreen === 'media' ? (
+        <MediaScreen onBack={() => setActiveScreen('chat')} />
       ) : (
         <ChatScreen
           key={sessionId}
@@ -203,6 +212,9 @@ function AppContent() {
           onClose={closeDrawer}
           onOpenNotifications={() => { closeDrawer(); setActiveScreen('notifications'); }}
           onOpenProfile={() => { closeDrawer(); setActiveScreen('profile'); }}
+          onOpenDashboard={() => { closeDrawer(); setActiveScreen('dashboard'); }}
+          onOpenUpgrade={() => { closeDrawer(); setActiveScreen('upgrade'); }}
+          onOpenMedia={() => { closeDrawer(); setActiveScreen('media'); }}
         />
       </Animated.View>
     </View>

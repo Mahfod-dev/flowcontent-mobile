@@ -1,12 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Session } from '../types';
+import { Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaFile, NangoConnection, NangoProvider, Session, SubscriptionPlan } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
+
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
 
 // Global 401 handler — triggers auto-logout from any API call
 let _onTokenExpired: (() => void) | null = null;
 
-async function authFetch(url: string, token: string, init?: RequestInit): Promise<Response> {
+async function authFetch(url: string, token: string, init?: RequestInit, critical = true): Promise<Response> {
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -14,7 +23,7 @@ async function authFetch(url: string, token: string, init?: RequestInit): Promis
       Authorization: `Bearer ${token}`,
     },
   });
-  if (res.status === 401 && _onTokenExpired) {
+  if (res.status === 401 && _onTokenExpired && critical) {
     _onTokenExpired();
   }
   return res;
@@ -23,13 +32,38 @@ async function authFetch(url: string, token: string, init?: RequestInit): Promis
 export const apiService = {
   setOnTokenExpired(cb: () => void) { _onTokenExpired = cb; },
 
+  async loginWithGoogle(idToken: string) {
+    const res = await fetch(`${API_URL}/api/auth/google/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: idToken }),
+    });
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Erreur serveur (${res.status})`);
+    }
+    if (!res.ok) {
+      throw new Error(data?.error?.message || data?.message || 'Connexion Google échouée');
+    }
+    return data;
+  },
+
   async login(email: string, password: string) {
     const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Erreur serveur (${res.status})`);
+    }
     if (!res.ok) {
       throw new Error(data?.error?.message || data?.message || 'Email ou mot de passe incorrect');
     }
@@ -40,22 +74,23 @@ export const apiService = {
     const res = await authFetch(`${API_URL}/api/fc-agent/sessions`, token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Nouvelle conversation' }),
+      body: JSON.stringify({}),
     });
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
+      const errData = await safeJson(res) ?? {};
       const msg = errData?.error?.message || errData?.message || `Erreur ${res.status}`;
       throw new Error(`Impossible de créer une session: ${msg}`);
     }
-    const data = await res.json();
-    return { sessionId: data.conversation?.id || data.sessionId || data.id };
+    const data = await safeJson(res);
+    return { sessionId: data?.conversation?.id || data?.sessionId || data?.id };
   },
 
   async getSessions(token: string): Promise<Session[]> {
     const res = await authFetch(`${API_URL}/api/fc-agent/sessions`, token);
     if (res.status === 401) throw new Error('TOKEN_EXPIRED');
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = await safeJson(res);
+    if (!data) return [];
     const conversations = data.conversations ?? data ?? [];
     return conversations.map((c: any) => ({
       id: c.id,
@@ -79,8 +114,8 @@ export const apiService = {
   async getSessionMessages(token: string, sessionId: string) {
     const res = await authFetch(`${API_URL}/api/fc-agent/sessions/${sessionId}`, token);
     if (!res.ok) return [];
-    const data = await res.json();
-    return data.messages ?? data.conversation?.messages ?? [];
+    const data = await safeJson(res);
+    return data?.messages ?? data?.conversation?.messages ?? [];
   },
 
   async renameSession(token: string, sessionId: string, title: string): Promise<boolean> {
@@ -92,13 +127,16 @@ export const apiService = {
     return res.ok;
   },
 
-  async getCredits(token: string): Promise<{ balance: number; free: number } | null> {
-    const res = await authFetch(`${API_URL}/api/fc-agent/credits`, token);
+  async getCredits(token: string): Promise<Credits | null> {
+    const res = await authFetch(`${API_URL}/api/credits`, token, undefined, false);
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = await safeJson(res);
+    if (!data) return null;
+    const c = data.data ?? data;
     return {
-      balance: data.credits?.total_available ?? 0,
-      free: data.credits?.free_credits_remaining ?? 0,
+      total_available: c.total ?? c.balance ?? c.total_available ?? 0,
+      free_credits_remaining: c.free_balance ?? c.free_credits_remaining ?? 0,
+      plan: c.plan ?? 'free',
     };
   },
 
@@ -116,66 +154,282 @@ export const apiService = {
     });
     if (res.status === 401 && _onTokenExpired) _onTokenExpired();
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
+      const err = await safeJson(res) ?? {};
       throw new Error(err.message || `Upload failed (${res.status})`);
     }
-    return res.json();
+    return safeJson(res);
   },
 
   // Site Domains
   async getSiteDomains(token: string): Promise<any[]> {
-    const res = await authFetch(`${API_URL}/api/site-domains`, token);
+    const res = await authFetch(`${API_URL}/api/site-domains`, token, undefined, false);
     if (!res.ok) return [];
-    const data = await res.json();
-    return data.sites ?? data ?? [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.sites ?? data ?? [];
+    return Array.isArray(list) ? list : [];
   },
 
   // Notifications
   async getNotificationBadge(token: string): Promise<{ unread: number; urgent: number }> {
-    const res = await authFetch(`${API_URL}/api/notifications/badge`, token);
+    const res = await authFetch(`${API_URL}/api/notifications/badge`, token, undefined, false);
     if (!res.ok) return { unread: 0, urgent: 0 };
-    return res.json();
+    const data = await safeJson(res);
+    const badge = data?.data ?? data;
+    return { unread: badge?.unread ?? 0, urgent: badge?.urgent ?? 0 };
   },
 
   async getNotifications(token: string, limit = 50): Promise<any[]> {
-    const res = await authFetch(`${API_URL}/api/notifications?limit=${limit}`, token);
+    const res = await authFetch(`${API_URL}/api/notifications?limit=${limit}`, token, undefined, false);
     if (!res.ok) return [];
-    const data = await res.json();
-    return data.notifications ?? data ?? [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.notifications ?? data;
+    return Array.isArray(list) ? list : [];
   },
 
   async markNotificationRead(token: string, id: string): Promise<boolean> {
-    const res = await authFetch(`${API_URL}/api/notifications/${id}/read`, token, { method: 'POST' });
+    const res = await authFetch(`${API_URL}/api/notifications/${id}/read`, token, { method: 'POST' }, false);
     return res.ok;
   },
 
   async markAllNotificationsRead(token: string): Promise<boolean> {
-    const res = await authFetch(`${API_URL}/api/notifications/read-all`, token, { method: 'POST' });
+    const res = await authFetch(`${API_URL}/api/notifications/read-all`, token, { method: 'POST' }, false);
     return res.ok;
   },
 
   // User Profile
   async getProfile(token: string): Promise<any> {
-    const res = await authFetch(`${API_URL}/api/users/profile`, token);
+    const res = await authFetch(`${API_URL}/api/auth/me`, token, undefined, false);
     if (!res.ok) return null;
-    return res.json();
+    const data = await safeJson(res);
+    if (!data) return null;
+    return data.user ?? data;
   },
 
   async updateProfile(token: string, profile: Record<string, any>): Promise<boolean> {
-    const res = await authFetch(`${API_URL}/api/users/profile`, token, {
-      method: 'PUT',
+    const res = await authFetch(`${API_URL}/api/settings/profile`, token, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile),
-    });
+    }, false);
     return res.ok;
   },
 
   // Integrations
   async getMyIntegrations(token: string): Promise<any[]> {
-    const res = await authFetch(`${API_URL}/api/integrations/my`, token);
+    const res = await authFetch(`${API_URL}/api/integrations/my`, token, undefined, false);
     if (!res.ok) return [];
-    const data = await res.json();
-    return data.integrations ?? data ?? [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.integrations ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  // Dashboard
+  async getDashboard(token: string): Promise<DashboardData | null> {
+    const res = await authFetch(`${API_URL}/api/dashboard`, token, undefined, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    if (!data) return null;
+    return data.data ?? data;
+  },
+
+  async getDashboardMetrics(token: string): Promise<any> {
+    const res = await authFetch(`${API_URL}/api/dashboard/metrics`, token, undefined, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    return data?.data ?? data;
+  },
+
+  async getCreditsBalance(token: string): Promise<any> {
+    const res = await authFetch(`${API_URL}/api/credits`, token, undefined, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    return data?.data ?? data;
+  },
+
+  async getUrgentNotifications(token: string): Promise<{ total: number; data: any[] }> {
+    const res = await authFetch(`${API_URL}/api/notifications/urgent`, token, undefined, false);
+    if (!res.ok) return { total: 0, data: [] };
+    const data = await safeJson(res);
+    if (!data) return { total: 0, data: [] };
+    const list = data.data ?? data.notifications ?? data ?? [];
+    const arr = Array.isArray(list) ? list : [];
+    return { total: data.total ?? arr.length, data: arr };
+  },
+
+  async getDailyTasks(token: string): Promise<any> {
+    const res = await authFetch(`${API_URL}/api/daily-tasks`, token, undefined, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    return data?.data ?? data;
+  },
+
+  // Nango OAuth
+  async getNangoConnections(token: string): Promise<NangoConnection[]> {
+    const res = await authFetch(`${API_URL}/api/integrations/nango/connections`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.connections ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  async deleteNangoConnection(token: string, provider: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/integrations/nango/connections/${provider}`, token, {
+      method: 'DELETE',
+    }, false);
+    return res.ok;
+  },
+
+  async getNangoProviders(token: string): Promise<NangoProvider[]> {
+    const res = await authFetch(`${API_URL}/api/integrations/providers`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.providers ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  async initiateOAuth(token: string, provider: string): Promise<{ url: string } | null> {
+    const res = await authFetch(`${API_URL}/api/integrations/oauth/initiate`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider }),
+    }, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    if (!data) return null;
+    const authUrl = data.data?.authUrl ?? data.authUrl ?? data.url;
+    return authUrl ? { url: authUrl } : null;
+  },
+
+  // Subscription Plans
+  async getSubscriptionPlans(token: string): Promise<SubscriptionPlan[]> {
+    const res = await authFetch(`${API_URL}/api/credits/subscriptions/plans`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.plans ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  async getCurrentSubscription(token: string): Promise<CurrentSubscription | null> {
+    const res = await authFetch(`${API_URL}/api/credits/subscriptions/current`, token, undefined, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    if (!data) return null;
+    const sub = data.data ?? data.subscription ?? data;
+    return {
+      id: sub.id,
+      plan: sub.plan ?? sub.name ?? 'free',
+      status: sub.status ?? 'active',
+      credits_remaining: sub.credits_remaining ?? sub.balance ?? 0,
+      credits_total: sub.credits_total ?? sub.total ?? 0,
+      current_period_end: sub.current_period_end ?? sub.reset_at,
+      cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    };
+  },
+
+  async subscribePlan(token: string, planId: string): Promise<{ url: string } | null> {
+    const res = await authFetch(`${API_URL}/api/credits/subscriptions/subscribe`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId }),
+    }, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    if (!data) return null;
+    return { url: data.url ?? data.data?.url ?? '' };
+  },
+
+  async cancelSubscription(token: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/credits/subscriptions/cancel`, token, {
+      method: 'POST',
+    }, false);
+    return res.ok;
+  },
+
+  async getStripePortal(token: string): Promise<{ url: string } | null> {
+    const res = await authFetch(`${API_URL}/api/credits/subscriptions/portal`, token, {
+      method: 'POST',
+    }, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    if (!data) return null;
+    return { url: data.url ?? data.data?.url ?? '' };
+  },
+
+  // Credit Packs
+  async getCreditPacks(token: string): Promise<CreditPack[]> {
+    const res = await authFetch(`${API_URL}/api/credits/packs`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.packs ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  async purchasePack(token: string, packId: string): Promise<{ url: string } | null> {
+    const res = await authFetch(`${API_URL}/api/credits/purchase`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packId }),
+    }, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    if (!data) return null;
+    return { url: data.url ?? data.data?.url ?? '' };
+  },
+
+  // Credit History
+  async getCreditHistory(token: string): Promise<CreditTransaction[]> {
+    const res = await authFetch(`${API_URL}/api/credits/history`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.history ?? data.transactions ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  // Media Files (via backend proxy to Supabase Storage)
+  async getMediaFiles(token: string): Promise<MediaFile[]> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/files`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.files ?? data ?? [];
+    if (!Array.isArray(list)) return [];
+    return list.map((f: any) => ({
+      name: f.name ?? f.filename ?? '',
+      path: f.path ?? f.storagePath ?? f.name ?? '',
+      bucket: f.bucket ?? 'agent-files',
+      size: f.size ?? f.metadata?.size ?? 0,
+      mimeType: f.mimeType ?? f.mime_type ?? f.metadata?.mimetype ?? 'application/octet-stream',
+      created_at: f.created_at ?? f.createdAt ?? f.updated_at ?? '',
+      url: f.url ?? f.publicUrl,
+    }));
+  },
+
+  async deleteMediaFile(token: string, path: string, bucket = 'agent-files'): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/files`, token, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, bucket }),
+    }, false);
+    return res.ok;
+  },
+
+  async getMediaFileUrl(token: string, path: string, bucket = 'agent-files'): Promise<string | null> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/files/url`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, bucket }),
+    }, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    return data?.url ?? data?.data?.url ?? null;
   },
 
   async submitFeedback(token: string, sessionId: string, messageIndex: number, rating: 'up' | 'down'): Promise<boolean> {

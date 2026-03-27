@@ -14,7 +14,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
+import { useSpeech } from '../hooks/useSpeech';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBubble } from '../components/MessageBubble';
 import { ToolActivity } from '../components/ToolActivity';
@@ -33,30 +33,11 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  // Speech-to-text
-  useSpeechRecognitionEvent('start', () => setIsListening(true));
-  useSpeechRecognitionEvent('end', () => setIsListening(false));
-  useSpeechRecognitionEvent('result', (event) => {
-    const text = event.results[0]?.transcript;
-    if (text) setInput((prev) => prev + (prev ? ' ' : '') + text);
+  const { isListening, toggle: handleMic } = useSpeech((text) => {
+    setInput((prev) => prev + (prev ? ' ' : '') + text);
   });
-
-  const handleMic = async () => {
-    if (isListening) {
-      ExpoSpeechRecognitionModule.stop();
-      return;
-    }
-    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!granted) {
-      Alert.alert('Permission micro refusée', 'Activez le micro dans les réglages.');
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    ExpoSpeechRecognitionModule.start({ lang: 'fr-FR', interimResults: false, continuous: false });
-  };
 
   const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls } = useChat(
     sessionId ?? '',
