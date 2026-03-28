@@ -1,5 +1,5 @@
-import React, { memo, useState } from 'react';
-import { Alert, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { memo, useCallback, useState } from 'react';
+import { Alert, Linking, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
@@ -44,6 +44,10 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
     );
   };
 
+  const handleLinkPress = useCallback((url: string) => {
+    return true;
+  }, []);
+
   const handleFeedback = (rating: 'up' | 'down') => {
     if (feedback === rating) return;
     setFeedback(rating);
@@ -65,7 +69,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <Text style={styles.textUser}>{message.content}</Text>
           ) : (
             <View style={styles.markdownWrap}>
-              <Markdown style={mdStyles}>
+              <Markdown style={mdStyles} onLinkPress={handleLinkPress}>
                 {message.content + (message.isStreaming ? ' ▌' : '')}
               </Markdown>
             </View>

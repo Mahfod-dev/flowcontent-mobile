@@ -218,7 +218,7 @@ export function useChat(sessionId: string, userId: string) {
           }
           break;
         }
-        case 'stream:error':
+        case 'stream:error': {
           if (streamTimeoutRef.current) { clearTimeout(streamTimeoutRef.current); streamTimeoutRef.current = null; }
           if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
           stopTypewriter();
@@ -227,11 +227,16 @@ export function useChat(sessionId: string, userId: string) {
           setThinkingText('');
           setToolCalls([]);
           streamingIdRef.current = null;
-          setMessages((prev) => [
-            ...prev,
-            { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${event.error || 'Erreur'}`, timestamp: new Date() },
-          ]);
+          const errMsg = event.error || 'Erreur';
+          const isNetErr = /network|fetch|abort|timeout|disconnect/i.test(errMsg);
+          if (!isNetErr) {
+            setMessages((prev) => [
+              ...prev,
+              { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${errMsg}`, timestamp: new Date() },
+            ]);
+          }
           break;
+        }
       }
     });
 
@@ -281,10 +286,15 @@ export function useChat(sessionId: string, userId: string) {
         }
       } catch (err: any) {
         setIsTyping(false);
-        setMessages((prev) => [
-          ...prev,
-          { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${err.message}`, timestamp: new Date() },
-        ]);
+        // Suppress transient network errors (e.g. app returning from background)
+        const msg = err.message || '';
+        const isNetworkError = /network|fetch|abort|timeout/i.test(msg);
+        if (!isNetworkError) {
+          setMessages((prev) => [
+            ...prev,
+            { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${msg}`, timestamp: new Date() },
+          ]);
+        }
       }
     },
     [sessionId, stopTypewriter]
