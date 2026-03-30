@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
 import { User } from '../types';
@@ -24,7 +25,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const pushTokenRef = useRef<string | null>(null);
+
   const logout = useCallback(() => {
+    // Fire-and-forget: unregister push token
+    const pushToken = pushTokenRef.current;
+    if (pushToken) {
+      apiService.getToken().then((t) => {
+        if (t) apiService.unregisterDeviceToken(t, pushToken).catch(() => {});
+      });
+      pushTokenRef.current = null;
+      AsyncStorage.removeItem('fc_expo_push_token').catch(() => {});
+    }
     apiService.clearToken();
     socketService.disconnect();
     setUser(null);
@@ -49,8 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name: profile.name,
               token,
             });
+            // Restore push token ref for logout
+            const savedPush = await AsyncStorage.getItem('fc_expo_push_token');
+            if (savedPush) pushTokenRef.current = savedPush;
           } else {
-            // Token invalid, clear it
             await apiService.clearToken();
           }
         } catch {

@@ -172,6 +172,12 @@ export interface CurrentSubscription {
   cancel_at_period_end?: boolean;
 }
 
+export interface ModelOption {
+  label: string;
+  value: string | null;
+  emoji: string;
+}
+
 export interface MediaFile {
   name: string;
   path: string;

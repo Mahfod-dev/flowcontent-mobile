@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaFile, NangoConnection, NangoProvider, Session, SubscriptionPlan } from '../types';
 
@@ -430,6 +431,25 @@ export const apiService = {
     if (!res.ok) return null;
     const data = await safeJson(res);
     return data?.url ?? data?.data?.url ?? null;
+  },
+
+  // Push notification device token
+  async registerDeviceToken(token: string, expoPushToken: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/notifications/register-device`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expoPushToken, platform: Platform.OS }),
+    }, false);
+    return res.ok;
+  },
+
+  async unregisterDeviceToken(token: string, expoPushToken: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/notifications/register-device`, token, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expoPushToken }),
+    }, false);
+    return res.ok;
   },
 
   async submitFeedback(token: string, sessionId: string, messageIndex: number, rating: 'up' | 'down'): Promise<boolean> {

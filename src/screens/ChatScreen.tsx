@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,7 +23,14 @@ import { ToolActivity } from '../components/ToolActivity';
 import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { apiService } from '../services/api';
-import { MediaAttachment } from '../types';
+import { MediaAttachment, ModelOption } from '../types';
+
+const MODEL_OPTIONS: ModelOption[] = [
+  { label: 'Auto', value: null, emoji: '\u26A1' },
+  { label: 'RGPD (Mistral)', value: 'mistral-large-latest', emoji: '\uD83C\uDDEB\uD83C\uDDF7' },
+];
+
+const MODEL_STORAGE_KEY = 'fc_selected_model';
 
 interface ChatScreenProps {
   sessionId: string | null;
@@ -33,7 +42,30 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(MODEL_OPTIONS[0]);
+  const [modelModalVisible, setModelModalVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Restore persisted model choice
+  useEffect(() => {
+    AsyncStorage.getItem(MODEL_STORAGE_KEY).then((v) => {
+      if (v) {
+        const found = MODEL_OPTIONS.find((m) => m.value === v);
+        if (found) setSelectedModel(found);
+      }
+    });
+  }, []);
+
+  const pickModel = (opt: ModelOption) => {
+    setSelectedModel(opt);
+    setModelModalVisible(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (opt.value) {
+      AsyncStorage.setItem(MODEL_STORAGE_KEY, opt.value);
+    } else {
+      AsyncStorage.removeItem(MODEL_STORAGE_KEY);
+    }
+  };
 
   const { isListening, toggle: handleMic } = useSpeech((text) => {
     setInput((prev) => prev + (prev ? ' ' : '') + text);
@@ -57,7 +89,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const handleSend = () => {
     if (!input.trim() && attachments.length === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(input.trim(), attachments.length > 0 ? attachments : undefined);
+    sendMessage(input.trim(), attachments.length > 0 ? attachments : undefined, selectedModel.value);
     setInput('');
     setAttachments([]);
   };
@@ -147,9 +179,46 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         <TouchableOpacity onPress={onOpenDrawer} style={styles.hamburger}>
           <Text style={styles.hamburgerIcon}>☰</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>⚡ FC-Agent</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>{'\u26A1'} FC-Agent</Text>
+        <TouchableOpacity
+          style={styles.modelBtn}
+          onPress={() => setModelModalVisible(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.modelBtnText}>{selectedModel.emoji}</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Model picker modal */}
+      <Modal
+        visible={modelModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModelModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModelModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Choix du mod{'\u00E8'}le</Text>
+            {MODEL_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.label}
+                style={[styles.modelRow, selectedModel.value === opt.value && styles.modelRowActive]}
+                onPress={() => pickModel(opt)}
+              >
+                <Text style={styles.modelEmoji}>{opt.emoji}</Text>
+                <Text style={styles.modelLabel}>{opt.label}</Text>
+                {selectedModel.value === opt.value && (
+                  <Text style={styles.modelCheck}>{'\u2713'}</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Messages */}
       <FlatList
@@ -272,7 +341,28 @@ const styles = StyleSheet.create({
   },
   hamburgerIcon: { color: '#fff', fontSize: 22 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  headerSpacer: { width: 36 },
+  modelBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#312E81', justifyContent: 'center', alignItems: 'center',
+  },
+  modelBtnText: { fontSize: 18 },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1E1B4B', borderRadius: 16, padding: 20,
+    width: 260,
+  },
+  modalTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
+  modelRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12, paddingHorizontal: 12, borderRadius: 10,
+  },
+  modelRowActive: { backgroundColor: '#312E81' },
+  modelEmoji: { fontSize: 20 },
+  modelLabel: { color: '#fff', fontSize: 15, flex: 1 },
+  modelCheck: { color: '#6366F1', fontSize: 18, fontWeight: '700' },
   messageList: { paddingVertical: 12, flexGrow: 1 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 80, gap: 12 },
   emptyIcon: { fontSize: 48 },

@@ -255,7 +255,7 @@ export function useChat(sessionId: string, userId: string) {
 
   // Send message via HTTP (triggers stream via WebSocket)
   const sendMessage = useCallback(
-    async (text: string, media?: MediaAttachment[]) => {
+    async (text: string, media?: MediaAttachment[], model?: string | null) => {
       if ((!text.trim() && !media?.length) || !sessionId) return;
       stopTypewriter();
       const displayText = media?.length
@@ -272,6 +272,7 @@ export function useChat(sessionId: string, userId: string) {
         if (!token) throw new Error('Non authentifié');
         const body: any = { message: text };
         if (media?.length) body.media = media;
+        if (model) body.model = model;
         const res = await fetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/messages`, {
           method: 'POST',
           headers: {

@@ -22,6 +22,7 @@ import { UpgradeScreen } from './src/screens/UpgradeScreen';
 import { MediaScreen } from './src/screens/MediaScreen';
 import { Sidebar } from './src/components/Sidebar';
 import { apiService } from './src/services/api';
+import { notificationService } from './src/services/notifications';
 import { Session } from './src/types';
 
 const DRAWER_WIDTH = 280;
@@ -35,6 +36,24 @@ function AppContent() {
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
+
+  // Init push notifications
+  const pushTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user?.token) return;
+    notificationService.init(user.token).then((t) => {
+      pushTokenRef.current = t;
+      console.log('[Push] Token registered:', t);
+    }).catch((err) => {
+      console.warn('[Push] Init failed:', err);
+    });
+    notificationService.setOnNotificationTap((sid) => {
+      setSessionId(sid);
+      setActiveScreen('chat');
+    });
+    const sub = notificationService.addTapListener();
+    return () => sub.remove();
+  }, [user?.token]);
 
   // Load most recent session on login
   useEffect(() => {
