@@ -43,9 +43,10 @@ function AppContent() {
     if (!user?.token) return;
     notificationService.init(user.token).then((t) => {
       pushTokenRef.current = t;
-      console.log('[Push] Token registered:', t);
+      // TODO: remove debug alert after testing
+      Alert.alert('Push Debug', t ? `OK: ${t.slice(0, 40)}...` : 'Token null (permission refusée?)');
     }).catch((err) => {
-      console.warn('[Push] Init failed:', err);
+      Alert.alert('Push Error', String(err));
     });
     notificationService.setOnNotificationTap((sid) => {
       setSessionId(sid);
