@@ -32,7 +32,7 @@ export const notificationService = {
       }
 
       if (finalStatus !== 'granted') {
-        return `DENIED:${finalStatus}` as any; // debug: show actual status
+        return null;
       }
 
       // Android notification channel
@@ -55,8 +55,9 @@ export const notificationService = {
       await AsyncStorage.setItem('fc_expo_push_token', expoPushToken);
 
       return expoPushToken;
-    } catch (err: any) {
-      return `ERROR:${err?.message || err}` as any; // debug: show actual error
+    } catch (err) {
+      console.warn('[Push] Init error:', err);
+      return null;
     }
   },
 

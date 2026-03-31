@@ -43,10 +43,6 @@ function AppContent() {
     if (!user?.token) return;
     notificationService.init(user.token).then((t) => {
       pushTokenRef.current = t;
-      // TODO: remove debug alert after testing
-      Alert.alert('Push Debug', t ? `Result: ${t.slice(0, 80)}` : 'Token null (jamais atteint)');
-    }).catch((err) => {
-      Alert.alert('Push Error', String(err));
     });
     notificationService.setOnNotificationTap((sid) => {
       setSessionId(sid);
