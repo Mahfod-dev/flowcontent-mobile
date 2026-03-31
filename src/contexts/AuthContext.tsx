@@ -61,9 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name: profile.name,
               token,
             });
-            // Restore push token ref for logout
-            const savedPush = await AsyncStorage.getItem('fc_expo_push_token');
-            if (savedPush) pushTokenRef.current = savedPush;
+            // Restore push token ref for logout (non-critical, don't let it break auth)
+            try {
+              const savedPush = await AsyncStorage.getItem('fc_expo_push_token');
+              if (savedPush) pushTokenRef.current = savedPush;
+            } catch {}
+
           } else {
             await apiService.clearToken();
           }
