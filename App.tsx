@@ -44,7 +44,7 @@ function AppContent() {
     notificationService.init(user.token).then((t) => {
       pushTokenRef.current = t;
       // TODO: remove debug alert after testing
-      Alert.alert('Push Debug', t ? `OK: ${t.slice(0, 40)}...` : 'Token null (permission refusée?)');
+      Alert.alert('Push Debug', t ? `Result: ${t.slice(0, 80)}` : 'Token null (jamais atteint)');
     }).catch((err) => {
       Alert.alert('Push Error', String(err));
     });

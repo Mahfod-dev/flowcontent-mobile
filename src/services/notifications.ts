@@ -25,17 +25,14 @@ export const notificationService = {
     try {
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
-      console.log('[Push] Current permission status:', existing);
 
       if (existing !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
-        console.log('[Push] Requested permission, got:', status);
       }
 
       if (finalStatus !== 'granted') {
-        console.log('[Push] Permission denied, skipping');
-        return null;
+        return `DENIED:${finalStatus}` as any; // debug: show actual status
       }
 
       // Android notification channel
@@ -47,23 +44,19 @@ export const notificationService = {
         });
       }
 
-      console.log('[Push] Getting Expo push token...');
       const pushToken = await Notifications.getExpoPushTokenAsync({
         projectId: '5b21a603-9782-43d0-ab6d-dfeee96622ba',
       });
 
       const expoPushToken = pushToken.data;
-      console.log('[Push] Got token:', expoPushToken);
 
       // Register on backend + persist locally for logout cleanup
       await apiService.registerDeviceToken(token, expoPushToken);
-      console.log('[Push] Registered on backend');
       await AsyncStorage.setItem('fc_expo_push_token', expoPushToken);
 
       return expoPushToken;
-    } catch (err) {
-      console.warn('[Push] Init error:', err);
-      return null;
+    } catch (err: any) {
+      return `ERROR:${err?.message || err}` as any; // debug: show actual error
     }
   },
 
