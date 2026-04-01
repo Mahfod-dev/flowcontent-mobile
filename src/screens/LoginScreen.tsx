@@ -51,12 +51,18 @@ export function LoginScreen() {
     setError('');
     try {
       const result = await promptAsync();
+      Alert.alert('Google Debug', JSON.stringify({
+        type: result.type,
+        params: result.type === 'success' ? Object.keys(result.params || {}) : undefined,
+        auth: result.type === 'success' ? Object.keys((result as any).authentication || {}) : undefined,
+        error: result.type === 'error' ? result.error?.message : undefined,
+      }, null, 2));
       if (result.type === 'success') {
-        const idToken = result.params?.id_token || result.authentication?.idToken;
+        const idToken = result.params?.id_token || (result as any).authentication?.idToken;
         if (idToken) {
           await loginWithGoogle(idToken);
         } else {
-          setError('Pas de token reçu de Google');
+          setError('Pas de token reçu de Google. Keys: ' + Object.keys(result.params || {}).join(', '));
         }
       } else if (result.type === 'error') {
         setError(result.error?.message || 'Connexion Google échouée');
