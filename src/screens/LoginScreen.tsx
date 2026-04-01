@@ -11,21 +11,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../contexts/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
-
-// iOS native client ID
-const GOOGLE_IOS_CLIENT_ID = '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com';
-// Web client ID (needed for expo-auth-session proxy)
-const GOOGLE_WEB_CLIENT_ID = '323350263219-o0beqpu2fbhrv8lvki9o2rph12sl2h0n.apps.googleusercontent.com';
-
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-};
 
 export function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
@@ -35,19 +25,10 @@ export function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g',
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
+    webClientId: '323350263219-o0beqpu2fbhrv8lvki9o2rph12sl2h0n.apps.googleusercontent.com',
   });
-
-  const [request, , promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GOOGLE_IOS_CLIENT_ID,
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri,
-      responseType: AuthSession.ResponseType.IdToken,
-    },
-    discovery
-  );
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -70,8 +51,13 @@ export function LoginScreen() {
     setError('');
     try {
       const result = await promptAsync();
-      if (result.type === 'success' && result.params?.id_token) {
-        await loginWithGoogle(result.params.id_token);
+      if (result.type === 'success') {
+        const idToken = result.params?.id_token || result.authentication?.idToken;
+        if (idToken) {
+          await loginWithGoogle(idToken);
+        } else {
+          setError('Pas de token reçu de Google');
+        }
       } else if (result.type === 'error') {
         setError(result.error?.message || 'Connexion Google échouée');
       }
