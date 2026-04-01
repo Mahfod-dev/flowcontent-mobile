@@ -19,7 +19,14 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "FlowContent utilise le micro pour la saisie vocale.",
         "NSSpeechRecognitionUsageDescription": "FlowContent utilise la reconnaissance vocale pour transcrire vos messages.",
-        "NSPhotoLibraryUsageDescription": "FlowContent accède à vos photos pour les joindre aux messages."
+        "NSPhotoLibraryUsageDescription": "FlowContent accède à vos photos pour les joindre aux messages.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g"
+            ]
+          }
+        ]
       }
     },
     "android": {
