@@ -17,7 +17,10 @@ import { useAuth } from '../contexts/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_CLIENT_ID = '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com';
+// iOS native client ID
+const GOOGLE_IOS_CLIENT_ID = '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com';
+// Web client ID (needed for expo-auth-session proxy)
+const GOOGLE_WEB_CLIENT_ID = '323350263219-o0beqpu2fbhrv8lvki9o2rph12sl2h0n.apps.googleusercontent.com';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -32,11 +35,13 @@ export function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'flowcontent' });
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g',
+  });
 
   const [request, , promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: GOOGLE_CLIENT_ID,
+      clientId: GOOGLE_IOS_CLIENT_ID,
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
       responseType: AuthSession.ResponseType.IdToken,
