@@ -25,7 +25,7 @@ export function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
+  const [request, , promptAsync] = Google.useIdTokenAuthRequest({
     iosClientId: '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
     webClientId: '323350263219-o0beqpu2fbhrv8lvki9o2rph12sl2h0n.apps.googleusercontent.com',
   });
