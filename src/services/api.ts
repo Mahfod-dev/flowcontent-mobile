@@ -53,23 +53,10 @@ export const apiService = {
   },
 
   async loginWithGoogleAccessToken(accessToken: string) {
-    // Get user info from Google with the access token
-    const infoRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!infoRes.ok) throw new Error('Impossible de récupérer le profil Google');
-    const googleUser = await infoRes.json();
-
-    // Login on backend with email
     const res = await fetch(`${API_URL}/api/auth/google/login/access-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: googleUser.email,
-        name: googleUser.name,
-        googleId: googleUser.id,
-        picture: googleUser.picture,
-      }),
+      body: JSON.stringify({ accessToken }),
     });
     const text = await res.text();
     let data: any;
