@@ -18,16 +18,15 @@ import { useAuth } from '../contexts/AuthContext';
 WebBrowser.maybeCompleteAuthSession();
 
 export function LoginScreen() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogleCode } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [request, , promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: '323350263219-o0beqpu2fbhrv8lvki9o2rph12sl2h0n.apps.googleusercontent.com',
-    redirectUri: 'https://auth.expo.io/@mahfod/flowcontent-mobile',
+  const [request, , promptAsync] = Google.useAuthRequest({
+    iosClientId: '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
   });
 
   const handleLogin = async () => {
@@ -51,19 +50,8 @@ export function LoginScreen() {
     setError('');
     try {
       const result = await promptAsync();
-      Alert.alert('Google Debug', JSON.stringify({
-        type: result.type,
-        params: result.type === 'success' ? Object.keys(result.params || {}) : undefined,
-        auth: result.type === 'success' ? Object.keys((result as any).authentication || {}) : undefined,
-        error: result.type === 'error' ? result.error?.message : undefined,
-      }, null, 2));
-      if (result.type === 'success') {
-        const idToken = result.params?.id_token || (result as any).authentication?.idToken;
-        if (idToken) {
-          await loginWithGoogle(idToken);
-        } else {
-          setError('Pas de token reçu de Google. Keys: ' + Object.keys(result.params || {}).join(', '));
-        }
+      if (result.type === 'success' && result.authentication?.accessToken) {
+        await loginWithGoogleCode(result.authentication.accessToken);
       } else if (result.type === 'error') {
         setError(result.error?.message || 'Connexion Google échouée');
       }

@@ -10,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithGoogleCode: (accessToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => {},
   loginWithGoogle: async () => {},
+  loginWithGoogleCode: async () => {},
   logout: () => {},
 });
 
@@ -109,8 +111,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({ id: u.id || '', email: u.email || '', name: u.name, token });
   };
 
+  const loginWithGoogleCode = async (accessToken: string) => {
+    const data = await apiService.loginWithGoogleAccessToken(accessToken);
+    const token = data.token || data.access_token;
+    if (!token) throw new Error('Pas de token dans la réponse');
+    await apiService.saveToken(token);
+    socketService.connect(token);
+    const u = data.user || {};
+    setUser({ id: u.id || '', email: u.email || '', name: u.name, token });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, loginWithGoogleCode, logout }}>
       {children}
     </AuthContext.Provider>
   );
