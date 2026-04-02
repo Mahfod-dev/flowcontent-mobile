@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -25,9 +24,31 @@ export function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [request, , promptAsync] = Google.useAuthRequest({
+  const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
+    redirectUri: 'com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g:/oauthredirect',
   });
+
+  // Handle Google OAuth response asynchronously (code exchange happens in background)
+  useEffect(() => {
+    if (!response) return;
+    if (response.type === 'success') {
+      if (response.authentication?.accessToken) {
+        setGoogleLoading(true);
+        loginWithGoogleCode(response.authentication.accessToken)
+          .catch((err: any) => setError(err.message || 'Connexion Google échouée'))
+          .finally(() => setGoogleLoading(false));
+      } else {
+        setError('Pas de token reçu de Google');
+        setGoogleLoading(false);
+      }
+    } else if (response.type === 'error') {
+      setError(response.error?.message || 'Connexion Google échouée');
+      setGoogleLoading(false);
+    } else {
+      setGoogleLoading(false);
+    }
+  }, [response]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -49,15 +70,10 @@ export function LoginScreen() {
     setGoogleLoading(true);
     setError('');
     try {
-      const result = await promptAsync();
-      if (result.type === 'success' && result.authentication?.accessToken) {
-        await loginWithGoogleCode(result.authentication.accessToken);
-      } else if (result.type === 'error') {
-        setError(result.error?.message || 'Connexion Google échouée');
-      }
+      await promptAsync();
+      // Response is handled in the useEffect above
     } catch (err: any) {
       setError(err.message || 'Connexion Google échouée');
-    } finally {
       setGoogleLoading(false);
     }
   };
