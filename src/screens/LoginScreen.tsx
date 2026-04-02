@@ -27,6 +27,7 @@ export function LoginScreen() {
 
   const [request, , promptAsync] = Google.useIdTokenAuthRequest({
     clientId: '323350263219-o0beqpu2fbhrv8lvki9o2rph12sl2h0n.apps.googleusercontent.com',
+    redirectUri: 'https://auth.expo.io/@mahfod/flowcontent-mobile',
   });
 
   const handleLogin = async () => {
