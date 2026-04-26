@@ -6,8 +6,8 @@ import { MediaAttachment, Message, ToolCall } from '../types';
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
 // Typewriter speed: characters per chunk & interval
-const TYPEWRITER_CHUNK = 2;
-const TYPEWRITER_MS = 20;
+const TYPEWRITER_CHUNK = 8;
+const TYPEWRITER_MS = 10;
 
 export function useChat(sessionId: string, userId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -137,20 +137,25 @@ export function useChat(sessionId: string, userId: string) {
     const offStream = socketService.onStream((event: any) => {
       switch (event.type) {
         case 'stream:start':
+          gotStreamEventRef.current = true;
           setIsTyping(true);
           setThinkingText('Flow démarre...');
           resetStreamTimeout();
           break;
         case 'stream:text_delta':
+          gotStreamEventRef.current = true;
           setIsTyping(true);
           setThinkingText('');
           resetStreamTimeout();
           bufferRef.current += (event.delta || '');
-          if (!flushTimerRef.current) {
+          // First token: flush immediately for zero-latency feel
+          if (!streamingIdRef.current) {
+            flushBuffer();
+          } else if (!flushTimerRef.current) {
             flushTimerRef.current = setTimeout(() => {
               flushTimerRef.current = null;
               flushBuffer();
-            }, 50);
+            }, 16);
           }
           break;
         case 'stream:thinking':
@@ -253,11 +258,18 @@ export function useChat(sessionId: string, userId: string) {
     };
   }, [sessionId, flushBuffer, resetStreamTimeout, animateFullText, stopTypewriter]);
 
+  // Track whether we received any stream event after sending
+  const gotStreamEventRef = useRef(false);
+
   // Send message via HTTP (triggers stream via WebSocket)
   const sendMessage = useCallback(
     async (text: string, media?: MediaAttachment[], model?: string | null) => {
       if ((!text.trim() && !media?.length) || !sessionId) return;
       stopTypewriter();
+
+      // Ensure socket is alive before sending
+      socketService.ensureConnected();
+
       const displayText = media?.length
         ? `${text}${text ? '\n' : ''}${media.map((a) => `📎 ${a.filename}`).join('\n')}`
         : text;
@@ -266,6 +278,7 @@ export function useChat(sessionId: string, userId: string) {
         { id: `u-${Date.now()}`, role: 'user', content: displayText, timestamp: new Date(), attachments: media },
       ]);
       setIsTyping(true);
+      gotStreamEventRef.current = false;
 
       try {
         const token = tokenRef.current;
@@ -282,9 +295,18 @@ export function useChat(sessionId: string, userId: string) {
           body: JSON.stringify(body),
         });
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.message || `Erreur ${res.status}`);
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.message || `Erreur ${res.status}`);
         }
+
+        // Safety net: if no stream event arrives within 8s, force reconnect + re-join
+        setTimeout(() => {
+          if (!gotStreamEventRef.current && socketService.isConnected() === false) {
+            console.warn('[useChat] No stream event after 8s — forcing reconnect');
+            socketService.ensureConnected();
+            socketService.joinSession(sessionId);
+          }
+        }, 8000);
       } catch (err: any) {
         setIsTyping(false);
         // Suppress transient network errors (e.g. app returning from background)

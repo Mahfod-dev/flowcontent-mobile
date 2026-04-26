@@ -1,9 +1,11 @@
 import { io, Socket } from 'socket.io-client';
+import { AppState, AppStateStatus } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
 let socket: Socket | null = null;
 let currentSessionId: string | null = null;
+let currentToken: string | null = null;
 let isConnecting = false;
 
 // Persistent listener registries — survive socket recreation
@@ -19,8 +21,23 @@ function attachListenersToSocket(s: Socket) {
   });
 }
 
+// Reconnect socket when app comes back to foreground
+AppState.addEventListener('change', (state: AppStateStatus) => {
+  if (state === 'active' && currentToken) {
+    if (!socket?.connected) {
+      console.log('[Socket] App foregrounded — reconnecting');
+      socketService.connect(currentToken);
+    } else if (currentSessionId) {
+      // Socket still connected — re-join session just in case
+      socket.emit('join:session', { sessionId: currentSessionId });
+    }
+  }
+});
+
 export const socketService = {
   connect(token: string): Socket {
+    currentToken = token;
+
     if (socket?.connected) return socket;
     if (isConnecting && socket) return socket;
 
@@ -37,9 +54,9 @@ export const socketService = {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 10000,
-      timeout: 15000,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5000,
+      timeout: 10000,
     });
 
     attachListenersToSocket(socket);
@@ -56,14 +73,25 @@ export const socketService = {
       console.log('[Socket] Disconnected:', reason);
     });
     socket.on('connect_error', (err) => {
+      isConnecting = false;
       console.warn('[Socket] Error:', err.message);
     });
 
     return socket;
   },
 
+  /** Ensure socket is alive — force reconnect if stale */
+  ensureConnected(): boolean {
+    if (socket?.connected) return true;
+    if (currentToken) {
+      this.connect(currentToken);
+    }
+    return socket?.connected ?? false;
+  },
+
   joinSession(sessionId: string) {
     currentSessionId = sessionId;
+    this.ensureConnected();
     if (socket?.connected) {
       socket.emit('join:session', { sessionId });
     }
@@ -89,6 +117,7 @@ export const socketService = {
 
   disconnect() {
     currentSessionId = null;
+    currentToken = null;
     isConnecting = false;
     socket?.removeAllListeners();
     socket?.disconnect();
