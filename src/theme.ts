@@ -154,62 +154,85 @@ export const commonStyles = StyleSheet.create({
 });
 
 export const markdownTheme = {
-  body: { color: colors.text, fontSize: 15, lineHeight: 22 },
-  paragraph: { marginTop: 4, marginBottom: 4 },
-  heading1: { color: colors.text, fontSize: 20, fontWeight: '700' as const, marginTop: 8, marginBottom: 4 },
-  heading2: { color: colors.text, fontSize: 18, fontWeight: '700' as const, marginTop: 8, marginBottom: 4 },
-  heading3: { color: colors.text, fontSize: 16, fontWeight: '600' as const, marginTop: 6, marginBottom: 4 },
+  // Body — slightly larger line height for mobile readability
+  body: { color: colors.text, fontSize: 15, lineHeight: 24 },
+
+  // Paragraphs — compact for chat context
+  paragraph: { marginTop: 2, marginBottom: 6 },
+
+  // Headings — scaled down for chat bubbles (not articles)
+  heading1: { color: colors.text, fontSize: 17, fontWeight: '700' as const, marginTop: 10, marginBottom: 4, lineHeight: 24 },
+  heading2: { color: colors.text, fontSize: 16, fontWeight: '700' as const, marginTop: 8, marginBottom: 4, lineHeight: 22 },
+  heading3: { color: colors.text, fontSize: 15, fontWeight: '600' as const, marginTop: 6, marginBottom: 2, lineHeight: 22 },
+
+  // Inline
   strong: { color: colors.white, fontWeight: '700' as const },
   em: { color: colors.textSecondary, fontStyle: 'italic' as const },
-  link: { color: colors.accent, textDecorationLine: 'underline' as const },
+  link: { color: colors.accent, textDecorationLine: 'none' as const },
+
+  // Blockquote
   blockquote: {
     borderLeftWidth: 3,
     borderLeftColor: colors.accent,
-    paddingLeft: 12,
+    paddingLeft: 10,
+    paddingVertical: 2,
     marginLeft: 0,
-    marginVertical: 6,
+    marginVertical: 4,
     backgroundColor: colors.accentMuted,
     borderRadius: 4,
   },
+
+  // Inline code — pill style
   code_inline: {
     backgroundColor: colors.tertiary,
-    color: colors.textSecondary,
-    paddingHorizontal: 5,
+    color: '#E0E0E0',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 5,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 13,
+    fontSize: 13.5,
   },
+
+  // Code blocks — dark, compact, readable on small screens
   code_block: {
-    backgroundColor: '#0D0D0D',
-    color: colors.textSecondary,
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: '#0A0A0A',
+    color: '#D4D4D4',
+    padding: 10,
+    borderRadius: 8,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 13,
-    marginVertical: 6,
-    overflow: 'hidden' as const,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginVertical: 4,
   },
   fence: {
-    backgroundColor: '#0D0D0D',
-    color: colors.textSecondary,
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: '#0A0A0A',
+    color: '#D4D4D4',
+    padding: 10,
+    borderRadius: 8,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 13,
-    marginVertical: 6,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginVertical: 4,
   },
-  bullet_list: { marginVertical: 4 },
-  ordered_list: { marginVertical: 4 },
-  list_item: { marginVertical: 2 },
-  bullet_list_icon: { color: colors.accent, fontSize: 14, marginRight: 6 },
-  ordered_list_icon: { color: colors.accent, fontSize: 14, marginRight: 6 },
-  hr: { backgroundColor: colors.border, height: 1, marginVertical: 8 },
-  table: { borderColor: colors.border, borderWidth: 1, borderRadius: 6, marginVertical: 6 },
+
+  // Lists — compact for mobile
+  bullet_list: { marginVertical: 2 },
+  ordered_list: { marginVertical: 2 },
+  list_item: { marginVertical: 1, flexDirection: 'row' as const },
+  bullet_list_icon: { color: colors.accent, fontSize: 8, marginRight: 8, marginTop: 8 },
+  ordered_list_icon: { color: colors.accent, fontSize: 13, marginRight: 6 },
+  bullet_list_content: { flex: 1 },
+  ordered_list_content: { flex: 1 },
+
+  // Horizontal rule
+  hr: { backgroundColor: colors.border, height: StyleSheet.hairlineWidth, marginVertical: 8 },
+
+  // Tables — compact cells for mobile
+  table: { borderColor: colors.border, borderWidth: 1, borderRadius: 6, marginVertical: 4 },
   thead: { backgroundColor: colors.tertiary },
-  th: { color: colors.text, padding: 6, fontWeight: '600' as const },
-  td: { color: colors.text, padding: 6, borderColor: colors.border },
-  tr: { borderBottomWidth: 1, borderColor: colors.border },
+  th: { color: colors.text, padding: 4, paddingHorizontal: 6, fontWeight: '600' as const, fontSize: 12 },
+  td: { color: colors.text, padding: 4, paddingHorizontal: 6, borderColor: colors.border, fontSize: 13 },
+  tr: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
 } as const;
 
 export const notificationMarkdownTheme = {

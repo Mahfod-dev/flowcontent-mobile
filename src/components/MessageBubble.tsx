@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useState } from 'react';
-import { Alert, Linking, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -50,6 +50,55 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
     return true;
   }, []);
 
+  // Custom render rules for mobile-optimized blocks
+  const renderRules = {
+    fence: (node: any, children: any, parent: any, styles: any) => (
+      <ScrollView
+        key={node.key}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={codeBlockStyles.scrollContainer}
+        contentContainerStyle={codeBlockStyles.scrollContent}
+      >
+        <Text style={codeBlockStyles.codeText}>{node.content}</Text>
+      </ScrollView>
+    ),
+    code_block: (node: any, children: any, parent: any, styles: any) => (
+      <ScrollView
+        key={node.key}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={codeBlockStyles.scrollContainer}
+        contentContainerStyle={codeBlockStyles.scrollContent}
+      >
+        <Text style={codeBlockStyles.codeText}>{node.content}</Text>
+      </ScrollView>
+    ),
+    table: (node: any, children: any, parent: any, styles: any) => (
+      <ScrollView
+        key={node.key}
+        horizontal
+        showsHorizontalScrollIndicator
+        style={tableStyles.scrollContainer}
+      >
+        <View style={tableStyles.table}>{children}</View>
+      </ScrollView>
+    ),
+    tr: (node: any, children: any, parent: any, styles: any) => (
+      <View key={node.key} style={tableStyles.tr}>{children}</View>
+    ),
+    th: (node: any, children: any, parent: any, styles: any) => (
+      <View key={node.key} style={tableStyles.th}>
+        <Text style={tableStyles.thText}>{children}</Text>
+      </View>
+    ),
+    td: (node: any, children: any, parent: any, styles: any) => (
+      <View key={node.key} style={tableStyles.td}>
+        <Text style={tableStyles.tdText}>{children}</Text>
+      </View>
+    ),
+  };
+
   const handleFeedback = (rating: 'up' | 'down') => {
     if (feedback === rating) return;
     setFeedback(rating);
@@ -65,7 +114,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
           <Ionicons name="flash" size={16} color={colors.accent} />
         </View>
       )}
-      <View style={styles.bubbleWrap}>
+      <View style={[styles.bubbleWrap, !isUser && styles.bubbleWrapAssistant]}>
         <TouchableOpacity
           style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}
           onLongPress={handleLongPress}
@@ -75,7 +124,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <Text style={styles.textUser}>{message.content}</Text>
           ) : (
             <View style={styles.markdownWrap}>
-              <Markdown style={markdownTheme} onLinkPress={handleLinkPress}>
+              <Markdown style={markdownTheme} rules={renderRules} onLinkPress={handleLinkPress}>
                 {message.content + (message.isStreaming ? ' \u258C' : '')}
               </Markdown>
             </View>
@@ -131,11 +180,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   bubbleWrap: { maxWidth: '82%' },
+  bubbleWrapAssistant: { maxWidth: '92%' },
   bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleUser: { backgroundColor: colors.accent, borderBottomRightRadius: 4 },
-  bubbleAssistant: { backgroundColor: colors.secondary, borderBottomLeftRadius: 4 },
+  bubbleAssistant: { backgroundColor: colors.secondary, borderBottomLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 8 },
   textUser: { color: colors.white, fontSize: 15, lineHeight: 22 },
-  markdownWrap: { marginVertical: -8 },
+  markdownWrap: { marginVertical: -4 },
   time: { fontSize: 10, color: colors.textTertiary, marginTop: spacing.xs, alignSelf: 'flex-end' },
   feedbackRow: {
     flexDirection: 'row',
@@ -155,5 +205,62 @@ const styles = StyleSheet.create({
   feedbackActiveDown: {
     opacity: 1,
     backgroundColor: colors.errorMuted,
+  },
+});
+
+const codeBlockStyles = StyleSheet.create({
+  scrollContainer: {
+    backgroundColor: '#0A0A0A',
+    borderRadius: 8,
+    marginVertical: 4,
+    maxHeight: 300,
+  },
+  scrollContent: {
+    padding: 10,
+  },
+  codeText: {
+    color: '#D4D4D4',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+});
+
+const tableStyles = StyleSheet.create({
+  scrollContainer: {
+    marginVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  table: {
+    minWidth: '100%',
+  },
+  tr: {
+    flexDirection: 'row',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  th: {
+    backgroundColor: colors.tertiary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 100,
+  },
+  thText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 12.5,
+  },
+  td: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    minWidth: 100,
+    backgroundColor: 'transparent',
+  },
+  tdText: {
+    color: colors.text,
+    fontSize: 13,
   },
 });
