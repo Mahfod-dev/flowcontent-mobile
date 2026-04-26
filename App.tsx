@@ -24,8 +24,8 @@ import { Sidebar } from './src/components/Sidebar';
 import { apiService } from './src/services/api';
 import { notificationService } from './src/services/notifications';
 import { Session } from './src/types';
+import { colors, DRAWER_WIDTH } from './src/theme';
 
-const DRAWER_WIDTH = 280;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 function AppContent() {
@@ -179,7 +179,7 @@ function AppContent() {
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator color="#6366F1" size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }
@@ -251,17 +251,17 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0E17',
+    backgroundColor: colors.primary,
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: '#0F0E17',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     zIndex: 10,
   },
   drawer: {
@@ -271,5 +271,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: DRAWER_WIDTH,
     zIndex: 20,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: colors.border,
   },
 });

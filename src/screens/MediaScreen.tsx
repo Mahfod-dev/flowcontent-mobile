@@ -13,10 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { MediaFile } from '../types';
+import { colors, commonStyles, radii, spacing } from '../theme';
 
 interface MediaScreenProps {
   onBack: () => void;
@@ -27,14 +29,14 @@ type TabFilter = 'all' | 'images' | 'documents' | 'audio';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/mp4'];
 
-function getFileIcon(mimeType: string): string {
-  if (IMAGE_TYPES.includes(mimeType)) return '🖼';
-  if (mimeType === 'application/pdf') return '📄';
-  if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-  if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📊';
-  if (mimeType.includes('video')) return '🎬';
-  if (mimeType.includes('audio')) return '🎵';
-  return '📎';
+function getFileIconName(mimeType: string): keyof typeof Ionicons.glyphMap {
+  if (IMAGE_TYPES.includes(mimeType)) return 'image-outline';
+  if (mimeType === 'application/pdf') return 'document-text-outline';
+  if (mimeType.includes('word') || mimeType.includes('document')) return 'document-outline';
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'grid-outline';
+  if (mimeType.includes('video')) return 'videocam-outline';
+  if (mimeType.includes('audio')) return 'musical-notes-outline';
+  return 'attach-outline';
 }
 
 function formatFileSize(bytes: number): string {
@@ -76,7 +78,7 @@ function SwipeableFileRow({ onDelete, children }: { onDelete: () => void; childr
           Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
           onDeleteRef.current();
         }}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
         <Text style={styles.deleteActionText}>Supprimer</Text>
       </TouchableOpacity>
@@ -171,7 +173,9 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
         {isImage && thumbUrl ? (
           <Image source={{ uri: thumbUrl }} style={styles.fileThumbnail} />
         ) : (
-          <Text style={styles.fileIcon}>{getFileIcon(item.mimeType)}</Text>
+          <View style={styles.fileIconWrap}>
+            <Ionicons name={getFileIconName(item.mimeType)} size={24} color={colors.textSecondary} />
+          </View>
         )}
         <View style={styles.fileInfo}>
           <Text style={styles.fileName} numberOfLines={1}>{item.name}</Text>
@@ -196,10 +200,11 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>{'\u2039'}</Text>
+        <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mes fichiers</Text>
+        <Text style={commonStyles.headerTitle}>Mes fichiers</Text>
+        <View style={{ width: 36 }} />
       </View>
 
       {/* Tabs */}
@@ -209,6 +214,7 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
+            activeOpacity={0.7}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
               {tab === 'all' ? 'Tous' : tab === 'images' ? 'Images' : tab === 'audio' ? 'Audio' : 'Documents'}
@@ -219,21 +225,21 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
 
       {/* Content */}
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#6366F1" size="large" />
+        <View style={commonStyles.loadingContainer}>
+          <ActivityIndicator color={colors.accent} size="large" />
         </View>
       ) : (
         <FlatList
           data={filteredFiles}
           keyExtractor={(item) => item.path}
           renderItem={renderFile}
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 16 }]}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + spacing.lg }]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#6366F1" />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📂</Text>
+              <Ionicons name="folder-open-outline" size={48} color={colors.textTertiary} />
               <Text style={styles.emptyText}>Aucun fichier</Text>
               <Text style={styles.emptySubtext}>
                 Uploadez des fichiers via le chat pour les retrouver ici.
@@ -249,73 +255,48 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0E17',
+    backgroundColor: colors.primary,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1B4B',
-  },
-  backBtn: {
-    paddingRight: 12,
-    paddingVertical: 4,
-  },
-  backText: {
-    color: '#A5B4FC',
-    fontSize: 28,
-    fontWeight: '600',
-    lineHeight: 30,
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    ...commonStyles.header,
   },
   tabs: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
-    gap: 8,
+    gap: spacing.sm,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#1E1B4B',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.full,
+    backgroundColor: colors.secondary,
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: colors.border,
   },
   tabActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   tabText: {
-    color: '#A5B4FC',
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
   },
   tabTextActive: {
-    color: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: colors.white,
   },
   list: {
-    paddingHorizontal: 12,
-    paddingTop: 4,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
   },
   swipeContainer: {
     overflow: 'hidden',
-    borderRadius: 10,
-    marginBottom: 4,
+    borderRadius: radii.sm,
+    marginBottom: spacing.xs,
   },
   swipeContent: {
-    backgroundColor: '#0F0E17',
+    backgroundColor: colors.primary,
   },
   deleteAction: {
     position: 'absolute',
@@ -323,43 +304,46 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 80,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
   },
   deleteActionText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
   fileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#1E1B4B',
-    borderRadius: 10,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: colors.border,
   },
   fileThumbnail: {
     width: 44,
     height: 44,
     borderRadius: 6,
-    marginRight: 12,
-    backgroundColor: '#312E81',
+    marginRight: spacing.md,
+    backgroundColor: colors.tertiary,
   },
-  fileIcon: {
-    fontSize: 28,
-    marginRight: 12,
+  fileIconWrap: {
     width: 44,
-    textAlign: 'center',
+    height: 44,
+    borderRadius: 6,
+    marginRight: spacing.md,
+    backgroundColor: colors.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fileInfo: {
     flex: 1,
   },
   fileName: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 3,
@@ -369,30 +353,26 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   fileSize: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 12,
   },
   fileDate: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 12,
   },
   emptyContainer: {
     alignItems: 'center',
     marginTop: 60,
     paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    gap: spacing.sm,
   },
   emptyText: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
   },
   emptySubtext: {
-    color: '#4B5563',
+    color: colors.textTertiary,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,

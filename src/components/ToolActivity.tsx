@@ -1,6 +1,8 @@
 import React, { memo, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ToolCall } from '../types';
+import { colors, spacing } from '../theme';
 
 // Friendly tool name mapping
 const TOOL_LABELS: Record<string, string> = {
@@ -48,9 +50,9 @@ export const ToolActivity = memo(function ToolActivity({ tools }: { tools: ToolC
       {tools.map((tool) => (
         <View key={tool.id} style={styles.toolRow}>
           {tool.status === 'running' ? (
-            <ActivityIndicator size="small" color="#6366F1" style={styles.indicator} />
+            <ActivityIndicator size="small" color={colors.accent} style={styles.indicator} />
           ) : (
-            <Text style={styles.checkmark}>✓</Text>
+            <Ionicons name="checkmark" size={14} color={colors.success} style={styles.checkIcon} />
           )}
           <Text style={[styles.toolName, tool.status === 'done' && styles.toolDone]} numberOfLines={1}>
             {getToolLabel(tool.name)}
@@ -71,50 +73,47 @@ export const ToolActivity = memo(function ToolActivity({ tools }: { tools: ToolC
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#1E1B4B',
-    borderTopWidth: 1,
-    borderTopColor: '#312E81',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.secondary,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
     gap: 6,
   },
   toolRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   indicator: {
     width: 16,
     height: 16,
   },
-  checkmark: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontWeight: '700',
+  checkIcon: {
     width: 16,
     textAlign: 'center',
   },
   toolName: {
-    color: '#A5B4FC',
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
   },
   toolDone: {
-    color: '#6B7280',
+    color: colors.textTertiary,
   },
   progress: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 11,
     maxWidth: 100,
   },
   elapsed: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 11,
     fontVariant: ['tabular-nums'],
   },
   duration: {
-    color: '#22C55E',
+    color: colors.success,
     fontSize: 11,
     fontVariant: ['tabular-nums'],
   },

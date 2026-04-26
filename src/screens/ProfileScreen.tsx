@@ -13,10 +13,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { NangoConnection, NangoProvider } from '../types';
+import { colors, commonStyles, radii, spacing } from '../theme';
 
 // "google-search-console" → "Google Search Console"
 function formatProviderName(slug: string): string {
@@ -138,14 +140,14 @@ export function ProfileScreen({ onBack }: Props) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backIcon}>←</Text>
+          <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profil</Text>
+          <Text style={commonStyles.headerTitle}>Profil</Text>
           <View style={{ width: 36 }} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#6366F1" size="large" />
+        <View style={commonStyles.loadingContainer}>
+          <ActivityIndicator color={colors.accent} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -160,11 +162,11 @@ export function ProfileScreen({ onBack }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profil</Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving}>
+        <Text style={commonStyles.headerTitle}>Profil</Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.7}>
           <Text style={[styles.saveBtn, saving && { opacity: 0.5 }]}>
             {saving ? '...' : 'Sauver'}
           </Text>
@@ -184,45 +186,45 @@ export function ProfileScreen({ onBack }: Props) {
             </View>
           </View>
 
-          <Text style={styles.label}>Nom</Text>
+          <Text style={styles.label}>NOM</Text>
           <TextInput
-            style={styles.input}
+            style={commonStyles.input}
             value={profile.name}
             onChangeText={(v) => setProfile((p) => ({ ...p, name: v }))}
             placeholder="Votre nom"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
           />
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>EMAIL</Text>
           <TextInput
-            style={[styles.input, styles.inputDisabled]}
+            style={[commonStyles.input, styles.inputDisabled]}
             value={profile.email}
             editable={false}
           />
 
-          <Text style={styles.label}>Nom du site</Text>
+          <Text style={styles.label}>NOM DU SITE</Text>
           <TextInput
-            style={styles.input}
+            style={commonStyles.input}
             value={profile.site_name}
             onChangeText={(v) => setProfile((p) => ({ ...p, site_name: v }))}
             placeholder="Mon site"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
           />
 
-          <Text style={styles.label}>Téléphone</Text>
+          <Text style={styles.label}>TÉLÉPHONE</Text>
           <TextInput
-            style={styles.input}
+            style={commonStyles.input}
             value={profile.phone}
             onChangeText={(v) => setProfile((p) => ({ ...p, phone: v }))}
             placeholder="+33 6 00 00 00 00"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             keyboardType="phone-pad"
           />
 
           {/* Connecteurs — unified view */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Connecteurs ({integrations.length + activeNangoConnections.length})
+              CONNECTEURS ({integrations.length + activeNangoConnections.length})
             </Text>
 
             {/* Connected integrations (from /api/integrations/my) */}
@@ -241,8 +243,8 @@ export function ProfileScreen({ onBack }: Props) {
                     </Text>
                   )}
                 </View>
-                <View style={[styles.connectorBadge, !integ.isActive && { backgroundColor: '#1C1917' }]}>
-                  <Text style={[styles.connectorBadgeText, !integ.isActive && { color: '#6B7280' }]}>
+                <View style={[styles.connectorBadge, !integ.isActive && { backgroundColor: colors.tertiary }]}>
+                  <Text style={[styles.connectorBadgeText, !integ.isActive && { color: colors.textTertiary }]}>
                     {integ.isActive ? 'Actif' : 'Inactif'}
                   </Text>
                 </View>
@@ -267,6 +269,7 @@ export function ProfileScreen({ onBack }: Props) {
                   <TouchableOpacity
                     style={styles.disconnectBtn}
                     onPress={() => handleDisconnect(conn.provider)}
+                    activeOpacity={0.7}
                   >
                     <Text style={styles.disconnectText}>Retirer</Text>
                   </TouchableOpacity>
@@ -279,15 +282,15 @@ export function ProfileScreen({ onBack }: Props) {
               const s = (c.status || '').toUpperCase();
               return s === 'FAILED' || s === 'ERROR';
             }).map((conn: any) => (
-              <View key={`nango-fail-${conn.provider}`} style={[styles.connectorCard, { borderColor: '#7F1D1D' }]}>
+              <View key={`nango-fail-${conn.provider}`} style={[styles.connectorCard, { borderColor: colors.error }]}>
                 <View style={styles.connectorInfo}>
                   <View style={styles.connectorHeader}>
-                    <View style={[styles.connectorDot, { backgroundColor: '#EF4444' }]} />
+                    <View style={[styles.connectorDot, { backgroundColor: colors.error }]} />
                     <Text style={styles.connectorName}>{formatProviderName(conn.provider)}</Text>
                   </View>
                 </View>
-                <View style={[styles.connectorBadge, { backgroundColor: '#7F1D1D' }]}>
-                  <Text style={[styles.connectorBadgeText, { color: '#EF4444' }]}>Erreur</Text>
+                <View style={[styles.connectorBadge, { backgroundColor: colors.errorMuted }]}>
+                  <Text style={[styles.connectorBadgeText, { color: colors.error }]}>Erreur</Text>
                 </View>
               </View>
             ))}
@@ -300,7 +303,7 @@ export function ProfileScreen({ onBack }: Props) {
           {/* Available providers to connect */}
           {nangoProviders.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Connecter un service</Text>
+              <Text style={styles.sectionTitle}>CONNECTER UN SERVICE</Text>
               {nangoProviders.map((provider: any) => {
                 const pid = provider.id || provider.name;
                 const pName = provider.displayName || provider.display_name || provider.name || pid;
@@ -323,6 +326,7 @@ export function ProfileScreen({ onBack }: Props) {
                         style={styles.connectBtn}
                         onPress={() => handleConnect(provider.id)}
                         disabled={connectingProvider === provider.id}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.connectText}>
                           {connectingProvider === provider.id ? '...' : 'Connecter'}
@@ -341,72 +345,67 @@ export function ProfileScreen({ onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
+  container: { flex: 1, backgroundColor: colors.primary },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#1E1B4B', borderBottomWidth: 1, borderBottomColor: '#312E81',
+    ...commonStyles.header,
   },
-  backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  backIcon: { color: '#fff', fontSize: 22 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  saveBtn: { color: '#6366F1', fontSize: 15, fontWeight: '700' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  form: { padding: 20, gap: 4 },
-  avatarSection: { alignItems: 'center', marginBottom: 20 },
+  saveBtn: { color: colors.accent, fontSize: 15, fontWeight: '700' },
+  form: { padding: spacing.xl, gap: spacing.xs },
+  avatarSection: { alignItems: 'center', marginBottom: spacing.xl },
   avatar: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: '#6366F1',
+    width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accent,
     justifyContent: 'center', alignItems: 'center',
+    borderWidth: 3, borderColor: colors.accentMuted,
   },
-  avatarText: { color: '#fff', fontSize: 28, fontWeight: '700' },
-  label: { color: '#A5B4FC', fontSize: 12, fontWeight: '600', marginTop: 12, marginBottom: 4 },
-  input: {
-    backgroundColor: '#1E1B4B', color: '#fff', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
-    borderWidth: 1, borderColor: '#312E81',
+  avatarText: { color: colors.white, fontSize: 28, fontWeight: '700' },
+  label: {
+    color: colors.textTertiary, fontSize: 11, fontWeight: '600',
+    letterSpacing: 0.5, marginTop: spacing.md, marginBottom: spacing.xs,
   },
   inputDisabled: { opacity: 0.5 },
-  section: { marginTop: 24 },
-  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  section: { marginTop: spacing.xxl },
+  sectionTitle: {
+    color: colors.textTertiary, fontSize: 11, fontWeight: '700',
+    letterSpacing: 0.5, marginBottom: spacing.md,
+  },
   // Connector cards
   connectorCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#1E1B4B', borderRadius: 12, padding: 14, marginBottom: 8,
-    borderWidth: 1, borderColor: '#312E81',
+    backgroundColor: colors.secondary, borderRadius: radii.md, padding: 14, marginBottom: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
   },
   connectorInfo: { flex: 1, marginRight: 10 },
-  connectorHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  connectorHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   connectorDot: { width: 8, height: 8, borderRadius: 4 },
-  dotActive: { backgroundColor: '#22C55E' },
-  dotInactive: { backgroundColor: '#6B7280' },
-  connectorName: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  connectorAccount: { color: '#A5B4FC', fontSize: 12, marginTop: 4, marginLeft: 16 },
-  connectorScopes: { color: '#6B7280', fontSize: 11, marginTop: 2, marginLeft: 16 },
+  dotActive: { backgroundColor: colors.success },
+  dotInactive: { backgroundColor: colors.textTertiary },
+  connectorName: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  connectorAccount: { color: colors.textSecondary, fontSize: 12, marginTop: spacing.xs, marginLeft: spacing.lg },
   connectorBadge: {
-    backgroundColor: '#065F46', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+    backgroundColor: colors.successMuted, paddingHorizontal: 10, paddingVertical: spacing.xs, borderRadius: radii.md,
   },
-  connectorBadgeText: { color: '#22C55E', fontSize: 11, fontWeight: '600' },
-  noConnectors: { color: '#6B7280', fontSize: 13, textAlign: 'center', paddingVertical: 16 },
+  connectorBadgeText: { color: colors.success, fontSize: 11, fontWeight: '600' },
+  noConnectors: { color: colors.textTertiary, fontSize: 13, textAlign: 'center', paddingVertical: spacing.lg },
   // Provider rows
   providerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1E1B4B',
+    paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   providerInfo: { flex: 1, marginRight: 10 },
-  providerName: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  providerDesc: { color: '#6B7280', fontSize: 12, marginTop: 2 },
+  providerName: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  providerDesc: { color: colors.textTertiary, fontSize: 12, marginTop: 2 },
   connectedBadge: {
-    backgroundColor: '#1E1B4B', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-    borderWidth: 1, borderColor: '#22C55E',
+    backgroundColor: colors.secondary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radii.sm,
+    borderWidth: 1, borderColor: colors.success,
   },
-  connectedBadgeText: { color: '#22C55E', fontSize: 12, fontWeight: '600' },
+  connectedBadgeText: { color: colors.success, fontSize: 12, fontWeight: '600' },
   connectBtn: {
-    backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+    backgroundColor: colors.accent, paddingHorizontal: 14, paddingVertical: spacing.sm, borderRadius: radii.sm,
   },
-  connectText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  connectText: { color: colors.white, fontSize: 13, fontWeight: '600' },
   disconnectBtn: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-    borderWidth: 1, borderColor: '#EF4444',
+    paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.sm,
+    borderWidth: 1, borderColor: colors.error,
   },
-  disconnectText: { color: '#EF4444', fontSize: 12, fontWeight: '600' },
+  disconnectText: { color: colors.error, fontSize: 12, fontWeight: '600' },
 });

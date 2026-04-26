@@ -10,9 +10,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../contexts/AuthContext';
+import { colors, radii, shadows, spacing } from '../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,6 +25,8 @@ export function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
@@ -84,32 +88,39 @@ export function LoginScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.card}>
-        <Text style={styles.logo}>⚡ FlowContent</Text>
+        <View style={styles.logoRow}>
+          <Ionicons name="flash" size={28} color={colors.accent} />
+          <Text style={styles.logo}> FlowContent</Text>
+        </View>
         <Text style={styles.subtitle}>Connectez-vous à votre assistant IA</Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, emailFocused && styles.inputFocused]}
           placeholder="Email"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={colors.textTertiary}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          onFocus={() => setEmailFocused(true)}
+          onBlur={() => setEmailFocused(false)}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, passwordFocused && styles.inputFocused]}
           placeholder="Mot de passe"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={colors.textTertiary}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          onFocus={() => setPasswordFocused(true)}
+          onBlur={() => setPasswordFocused(false)}
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading || googleLoading}>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading || googleLoading} activeOpacity={0.7}>
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.buttonText}>Se connecter</Text>
           )}
@@ -125,9 +136,10 @@ export function LoginScreen() {
           style={styles.googleButton}
           onPress={handleGoogleLogin}
           disabled={!request || loading || googleLoading}
+          activeOpacity={0.7}
         >
           {googleLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <Text style={styles.googleIcon}>G</Text>
@@ -142,50 +154,64 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
-  flex: { flex: 1, justifyContent: 'center', padding: 24 },
-  card: { backgroundColor: '#1E1B4B', borderRadius: 20, padding: 28, gap: 16 },
-  logo: { color: '#fff', fontSize: 28, fontWeight: '800', textAlign: 'center' },
-  subtitle: { color: '#A5B4FC', fontSize: 14, textAlign: 'center', marginBottom: 8 },
+  container: { flex: 1, backgroundColor: colors.primary },
+  flex: { flex: 1, justifyContent: 'center', padding: spacing.xxl },
+  card: {
+    backgroundColor: colors.secondary,
+    borderRadius: radii.xxl,
+    padding: 28,
+    gap: spacing.lg,
+    ...shadows.card,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: { color: colors.text, fontSize: 28, fontWeight: '800', textAlign: 'center' },
+  subtitle: { color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: spacing.sm },
   input: {
-    backgroundColor: '#312E81',
-    color: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.tertiary,
+    color: colors.text,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#4338CA',
+    borderColor: colors.borderLight,
   },
-  error: { color: '#F87171', fontSize: 13, textAlign: 'center' },
+  inputFocused: {
+    borderColor: colors.accent,
+  },
+  error: { color: colors.error, fontSize: 13, textAlign: 'center' },
   button: {
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: colors.accent,
+    borderRadius: radii.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  buttonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   dividerLine: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#4338CA',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
   dividerText: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 13,
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
     paddingVertical: 14,
     gap: 10,
   },

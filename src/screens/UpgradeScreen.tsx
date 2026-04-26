@@ -11,10 +11,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { CreditPack, CreditTransaction, CurrentSubscription, SubscriptionPlan } from '../types';
+import { colors, commonStyles, radii, shadows, spacing } from '../theme';
 
 interface UpgradeScreenProps {
   onBack: () => void;
@@ -156,13 +158,14 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backText}>{'\u2039'}</Text>
+          <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Abonnement & Credits</Text>
+          <Text style={commonStyles.headerTitle}>Abonnement & Credits</Text>
+          <View style={{ width: 36 }} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#6366F1" size="large" />
+        <View style={commonStyles.loadingContainer}>
+          <ActivityIndicator color={colors.accent} size="large" />
         </View>
       </View>
     );
@@ -172,27 +175,28 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>{'\u2039'}</Text>
+        <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Abonnement & Credits</Text>
+        <Text style={commonStyles.headerTitle}>Abonnement & Credits</Text>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#6366F1" />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
         }
       >
         {/* Current Subscription */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mon abonnement</Text>
+          <Text style={styles.sectionTitle}>MON ABONNEMENT</Text>
           <View style={styles.card}>
             <View style={styles.planRow}>
               <Text style={styles.planName}>{subscription?.plan ?? 'Gratuit'}</Text>
               <View style={[styles.statusBadge, subscription?.status === 'active' ? styles.statusActive : styles.statusInactive]}>
-                <Text style={styles.statusText}>
+                <Text style={[styles.statusText, subscription?.status === 'active' ? styles.statusTextActive : styles.statusTextInactive]}>
                   {subscription?.cancel_at_period_end ? 'Annulation prevue' : subscription?.status === 'active' ? 'Actif' : subscription?.status ?? 'Inactif'}
                 </Text>
               </View>
@@ -214,7 +218,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         {/* Subscription Plans */}
         {plans.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Changer de plan</Text>
+            <Text style={styles.sectionTitle}>CHANGER DE PLAN</Text>
             {plans.map((plan) => {
               const isCurrent = subscription?.plan?.toLowerCase() === plan.name?.toLowerCase();
               return (
@@ -227,7 +231,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                   {plan.features && plan.features.length > 0 && (
                     <View style={styles.featuresContainer}>
                       {plan.features.map((f, i) => (
-                        <Text key={i} style={styles.featureText}>- {f}</Text>
+                        <View key={i} style={styles.featureRow}>
+                          <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
+                          <Text style={styles.featureText}>{f}</Text>
+                        </View>
                       ))}
                     </View>
                   )}
@@ -240,9 +247,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                       style={styles.choosePlanBtn}
                       onPress={() => handleSubscribe(plan.id)}
                       disabled={actionLoading === plan.id}
+                      activeOpacity={0.7}
                     >
                       {actionLoading === plan.id ? (
-                        <ActivityIndicator color="#fff" size="small" />
+                        <ActivityIndicator color={colors.white} size="small" />
                       ) : (
                         <Text style={styles.choosePlanText}>Choisir</Text>
                       )}
@@ -257,7 +265,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         {/* Credit Packs */}
         {packs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Acheter des credits</Text>
+            <Text style={styles.sectionTitle}>ACHETER DES CREDITS</Text>
             <View style={styles.packsGrid}>
               {packs.map((pack) => (
                 <View key={pack.id} style={styles.packCard}>
@@ -268,9 +276,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                     style={styles.packBuyBtn}
                     onPress={() => handlePurchasePack(pack.id)}
                     disabled={actionLoading === pack.id}
+                    activeOpacity={0.7}
                   >
                     {actionLoading === pack.id ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                      <ActivityIndicator color={colors.white} size="small" />
                     ) : (
                       <Text style={styles.packBuyText}>Acheter</Text>
                     )}
@@ -284,7 +293,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         {/* Transaction History */}
         {history.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Historique</Text>
+            <Text style={styles.sectionTitle}>HISTORIQUE</Text>
             {history.slice(0, 20).map((tx) => (
               <View key={tx.id} style={styles.historyRow}>
                 <View style={{ flex: 1 }}>
@@ -311,16 +320,17 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
             style={styles.portalBtn}
             onPress={handlePortal}
             disabled={actionLoading === 'portal'}
+            activeOpacity={0.7}
           >
             {actionLoading === 'portal' ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={colors.white} size="small" />
             ) : (
               <Text style={styles.portalBtnText}>Gerer mon abonnement (Stripe)</Text>
             )}
           </TouchableOpacity>
 
           {subscription?.status === 'active' && !subscription?.cancel_at_period_end && (
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.7}>
               <Text style={styles.cancelBtnText}>Annuler l'abonnement</Text>
             </TouchableOpacity>
           )}
@@ -333,117 +343,97 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0E17',
+    backgroundColor: colors.primary,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1B4B',
-  },
-  backBtn: {
-    paddingRight: 12,
-    paddingVertical: 4,
-  },
-  backText: {
-    color: '#A5B4FC',
-    fontSize: 28,
-    fontWeight: '600',
-    lineHeight: 30,
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...commonStyles.header,
   },
   scroll: {
     flex: 1,
   },
   section: {
-    paddingHorizontal: 16,
-    marginTop: 20,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
   },
   sectionTitle: {
-    color: '#A5B4FC',
-    fontSize: 14,
+    color: colors.textTertiary,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   card: {
-    backgroundColor: '#1E1B4B',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.md,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: colors.border,
   },
   planRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   planName: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 20,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
   statusBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
   },
   statusActive: {
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    backgroundColor: colors.successMuted,
   },
   statusInactive: {
-    backgroundColor: 'rgba(239,68,68,0.15)',
+    backgroundColor: colors.errorMuted,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#22C55E',
+  },
+  statusTextActive: {
+    color: colors.success,
+  },
+  statusTextInactive: {
+    color: colors.error,
   },
   creditsText: {
-    color: '#D1D5DB',
+    color: colors.textSecondary,
     fontSize: 15,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   progressBar: {
     height: 6,
-    backgroundColor: '#312E81',
+    backgroundColor: colors.tertiary,
     borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#6366F1',
+    backgroundColor: colors.accent,
     borderRadius: 3,
   },
   renewDate: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 12,
   },
   planCard: {
-    backgroundColor: '#1E1B4B',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.md,
+    padding: spacing.lg,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: colors.border,
   },
   planCardCurrent: {
-    borderColor: '#6366F1',
+    borderColor: colors.accent,
     borderWidth: 2,
   },
   planCardHeader: {
@@ -453,47 +443,53 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   planCardName: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
   },
   planCardPrice: {
-    color: '#A5B4FC',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '700',
   },
   planCardCredits: {
-    color: '#9CA3AF',
+    color: colors.textSecondary,
     fontSize: 13,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   featuresContainer: {
     marginBottom: 10,
+    gap: spacing.xs,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   featureText: {
-    color: '#9CA3AF',
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
   currentPlanBadge: {
-    backgroundColor: '#312E81',
-    borderRadius: 8,
-    paddingVertical: 8,
+    backgroundColor: colors.tertiary,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   currentPlanText: {
-    color: '#A5B4FC',
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   choosePlanBtn: {
-    backgroundColor: '#6366F1',
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radii.sm,
     paddingVertical: 10,
     alignItems: 'center',
   },
   choosePlanText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -503,38 +499,38 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   packCard: {
-    backgroundColor: '#1E1B4B',
-    borderRadius: 12,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.md,
     padding: 14,
     width: '48%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: colors.border,
   },
   packCredits: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 24,
     fontWeight: '800',
   },
   packCreditsLabel: {
-    color: '#9CA3AF',
+    color: colors.textSecondary,
     fontSize: 12,
     marginBottom: 6,
   },
   packPrice: {
-    color: '#A5B4FC',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 10,
   },
   packBuyBtn: {
-    backgroundColor: '#6366F1',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
+    backgroundColor: colors.accent,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   packBuyText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -542,47 +538,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1B4B',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   historyDesc: {
-    color: '#D1D5DB',
+    color: colors.textSecondary,
     fontSize: 14,
   },
   historyDate: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 11,
     marginTop: 2,
   },
   historyAmount: {
     fontSize: 15,
     fontWeight: '700',
-    marginLeft: 12,
+    marginLeft: spacing.md,
   },
   historyPositive: {
-    color: '#22C55E',
+    color: colors.success,
   },
   historyNegative: {
-    color: '#EF4444',
+    color: colors.error,
   },
   portalBtn: {
-    backgroundColor: '#312E81',
-    borderRadius: 10,
+    backgroundColor: colors.tertiary,
+    borderRadius: radii.sm,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   portalBtnText: {
-    color: '#A5B4FC',
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '600',
   },
   cancelBtn: {
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   cancelBtnText: {
-    color: '#EF4444',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '600',
   },

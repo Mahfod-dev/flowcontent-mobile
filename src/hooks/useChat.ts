@@ -138,7 +138,7 @@ export function useChat(sessionId: string, userId: string) {
       switch (event.type) {
         case 'stream:start':
           setIsTyping(true);
-          setThinkingText('FC-Agent démarre...');
+          setThinkingText('Flow démarre...');
           resetStreamTimeout();
           break;
         case 'stream:text_delta':
@@ -154,7 +154,7 @@ export function useChat(sessionId: string, userId: string) {
           }
           break;
         case 'stream:thinking':
-          setThinkingText(event.content || event.delta || 'FC-Agent réfléchit...');
+          setThinkingText(event.content || event.delta || 'Flow réfléchit...');
           resetStreamTimeout();
           break;
         case 'stream:tool_start': {
@@ -163,7 +163,7 @@ export function useChat(sessionId: string, userId: string) {
             ...prev,
             { id: toolId, name: event.toolName || 'Outil', status: 'running', startedAt: Date.now() },
           ]);
-          setThinkingText(`🔧 ${event.toolName || 'Outil en cours'}...`);
+          setThinkingText(`${event.toolName || 'Outil en cours'}...`);
           resetStreamTimeout();
           break;
         }
@@ -184,7 +184,7 @@ export function useChat(sessionId: string, userId: string) {
               t.id === event.toolCallId ? { ...t, message: event.message } : t
             )
           );
-          setThinkingText(`🔧 ${event.message || event.toolName || 'En cours'}...`);
+          setThinkingText(`${event.message || event.toolName || 'En cours'}...`);
           resetStreamTimeout();
           break;
         case 'stream:heartbeat':

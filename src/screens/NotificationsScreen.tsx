@@ -10,15 +10,17 @@ import {
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { AppNotification } from '../types';
+import { colors, commonStyles, notificationMarkdownTheme, radii, spacing } from '../theme';
 
 const PRIORITY_COLORS: Record<string, string> = {
-  urgent: '#EF4444',
-  high: '#F97316',
-  medium: '#6366F1',
-  low: '#6B7280',
+  urgent: colors.error,
+  high: colors.warning,
+  medium: colors.accent,
+  low: colors.textTertiary,
 };
 
 function timeAgo(dateStr: string): string {
@@ -77,14 +79,14 @@ export function NotificationsScreen({ onBack }: Props) {
       onPress={() => !item.is_read && handleMarkRead(item.id)}
       activeOpacity={0.7}
     >
-      <View style={[styles.priorityBar, { backgroundColor: PRIORITY_COLORS[item.priority] || '#6B7280' }]} />
+      <View style={[styles.priorityBar, { backgroundColor: PRIORITY_COLORS[item.priority] || colors.textTertiary }]} />
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.cardTime}>{timeAgo(item.created_at)}</Text>
         </View>
         <View style={styles.markdownWrap}>
-          <Markdown style={mdStyles}>{item.message}</Markdown>
+          <Markdown style={notificationMarkdownTheme}>{item.message}</Markdown>
         </View>
         <View style={styles.cardFooter}>
           <Text style={styles.cardCategory}>{item.category}</Text>
@@ -99,20 +101,22 @@ export function NotificationsScreen({ onBack }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead}>
+        <Text style={commonStyles.headerTitle}>Notifications</Text>
+        {unreadCount > 0 ? (
+          <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.7}>
             <Text style={styles.markAllRead}>Tout lire</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
         )}
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#6366F1" size="large" />
+        <View style={commonStyles.loadingContainer}>
+          <ActivityIndicator color={colors.accent} size="large" />
         </View>
       ) : (
         <FlatList
@@ -121,11 +125,11 @@ export function NotificationsScreen({ onBack }: Props) {
           renderItem={renderNotification}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#6366F1" />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🔔</Text>
+              <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
               <Text style={styles.emptyText}>Aucune notification</Text>
             </View>
           }
@@ -135,51 +139,27 @@ export function NotificationsScreen({ onBack }: Props) {
   );
 }
 
-const mdStyles = StyleSheet.create({
-  body: { color: '#A5B4FC', fontSize: 13, lineHeight: 18 },
-  strong: { color: '#C7D2FE', fontWeight: '700' },
-  em: { color: '#A5B4FC', fontStyle: 'italic' },
-  link: { color: '#818CF8', textDecorationLine: 'underline' },
-  paragraph: { marginTop: 0, marginBottom: 0 },
-  bullet_list: { marginTop: 2, marginBottom: 2 },
-  ordered_list: { marginTop: 2, marginBottom: 2 },
-  list_item: { marginTop: 0, marginBottom: 0 },
-  heading1: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 0, marginBottom: 2 },
-  heading2: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 0, marginBottom: 2 },
-  heading3: { color: '#E0E7FF', fontSize: 13, fontWeight: '600', marginTop: 0, marginBottom: 2 },
-  code_inline: { backgroundColor: '#312E81', color: '#C7D2FE', fontSize: 12, paddingHorizontal: 4, borderRadius: 3 },
-  fence: { backgroundColor: '#312E81', borderRadius: 6, padding: 8, marginVertical: 4 },
-  code_block: { color: '#C7D2FE', fontSize: 12 },
-});
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
+  container: { flex: 1, backgroundColor: colors.primary },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#1E1B4B', borderBottomWidth: 1, borderBottomColor: '#312E81',
+    ...commonStyles.header,
   },
-  backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  backIcon: { color: '#fff', fontSize: 22 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  markAllRead: { color: '#6366F1', fontSize: 13, fontWeight: '600' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { padding: 12, gap: 8 },
+  markAllRead: { color: colors.accent, fontSize: 13, fontWeight: '600' },
+  list: { padding: spacing.md, gap: spacing.sm },
   card: {
-    flexDirection: 'row', backgroundColor: '#1E1B4B', borderRadius: 12, overflow: 'hidden',
-    marginBottom: 8,
+    flexDirection: 'row', backgroundColor: colors.secondary, borderRadius: radii.md, overflow: 'hidden',
+    marginBottom: spacing.sm,
   },
-  cardUnread: { backgroundColor: '#1E1B5B' },
+  cardUnread: { backgroundColor: '#1E1E1E' },
   priorityBar: { width: 4 },
-  cardContent: { flex: 1, padding: 12, gap: 4 },
+  cardContent: { flex: 1, padding: spacing.md, gap: spacing.xs },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1, marginRight: 8 },
-  cardTime: { color: '#6B7280', fontSize: 11 },
+  cardTitle: { color: colors.text, fontSize: 14, fontWeight: '600', flex: 1, marginRight: spacing.sm },
+  cardTime: { color: colors.textTertiary, fontSize: 11 },
   markdownWrap: { marginVertical: -4 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  cardCategory: { color: '#6B7280', fontSize: 11, textTransform: 'capitalize' },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366F1' },
-  empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyIcon: { fontSize: 48 },
-  emptyText: { color: '#6B7280', fontSize: 14 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
+  cardCategory: { color: colors.textTertiary, fontSize: 11, textTransform: 'capitalize' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  empty: { alignItems: 'center', paddingTop: 80, gap: spacing.md },
+  emptyText: { color: colors.textTertiary, fontSize: 14 },
 });

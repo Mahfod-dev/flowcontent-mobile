@@ -14,10 +14,12 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { Credits, Session, SiteDomain } from '../types';
+import { colors, radii, spacing } from '../theme';
 
 const PINNED_KEY = 'fc_pinned_sessions';
 
@@ -72,7 +74,7 @@ function SwipeableRow({ onDelete, onPin, isPinned, children }: { onDelete: () =>
           Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
           onPinRef.current();
         }}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
         <Text style={styles.pinActionText}>{isPinned ? 'Désépingler' : 'Épingler'}</Text>
       </TouchableOpacity>
@@ -83,7 +85,7 @@ function SwipeableRow({ onDelete, onPin, isPinned, children }: { onDelete: () =>
           Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
           onDeleteRef.current();
         }}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
         <Text style={styles.deleteActionText}>Supprimer</Text>
       </TouchableOpacity>
@@ -271,7 +273,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
           activeOpacity={0.7}
         >
           <View style={styles.sessionTitleRow}>
-            {isPinned && <Text style={styles.pinIcon}>📌</Text>}
+            {isPinned && <Ionicons name="pin" size={12} color={colors.accent} />}
             <Text style={[styles.sessionTitle, isActive && styles.sessionTitleActive, isPinned && { flex: 1 }]} numberOfLines={1}>
               {item.title || 'Conversation sans titre'}
             </Text>
@@ -293,7 +295,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* New chat button */}
       <TouchableOpacity style={styles.newChatBtn} onPress={onNewChat} activeOpacity={0.7}>
-        <Text style={styles.newChatIcon}>+</Text>
+        <Ionicons name="add-outline" size={20} color={colors.white} />
         <Text style={styles.newChatText}>Nouvelle conversation</Text>
       </TouchableOpacity>
 
@@ -303,6 +305,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
           <TouchableOpacity
             style={[styles.siteChip, !activeSiteId && styles.siteChipActive]}
             onPress={() => setActiveSiteId(null)}
+            activeOpacity={0.7}
           >
             <Text style={[styles.siteChipText, !activeSiteId && styles.siteChipTextActive]}>Tous</Text>
           </TouchableOpacity>
@@ -311,6 +314,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               key={site.id}
               style={[styles.siteChip, activeSiteId === site.id && styles.siteChipActive]}
               onPress={() => setActiveSiteId(activeSiteId === site.id ? null : site.id)}
+              activeOpacity={0.7}
             >
               <Text style={[styles.siteChipText, activeSiteId === site.id && styles.siteChipTextActive]} numberOfLines={1}>
                 {site.displayName || site.domain}
@@ -322,10 +326,11 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
 
       {/* Search bar */}
       <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={16} color={colors.textTertiary} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher..."
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
           clearButtonMode="while-editing"
@@ -335,7 +340,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
       {/* Conversations list */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#6366F1" size="small" />
+          <ActivityIndicator color={colors.accent} size="small" />
         </View>
       ) : (
         <FlatList
@@ -347,8 +352,8 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#6366F1"
-              colors={['#6366F1']}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
             />
           }
           ListEmptyComponent={
@@ -360,18 +365,18 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
         {credits && (
-          <TouchableOpacity style={styles.creditsRow} onPress={onOpenUpgrade} activeOpacity={onOpenUpgrade ? 0.7 : 1}>
+          <TouchableOpacity style={styles.creditsRow} onPress={onOpenUpgrade} activeOpacity={0.7}>
             <Text style={styles.creditsLabel}>Crédits · {credits.plan}</Text>
             <View style={styles.creditsRight}>
               <Text style={styles.creditsValue}>{credits.total_available}</Text>
-              {onOpenUpgrade && <Text style={styles.creditsChevron}>{'\u203A'}</Text>}
+              {onOpenUpgrade && <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />}
             </View>
           </TouchableOpacity>
         )}
         <View style={styles.footerActions}>
           {onOpenNotifications && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenNotifications}>
-              <Text style={styles.footerActionIcon}>🔔</Text>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenNotifications} activeOpacity={0.7}>
+              <Ionicons name="notifications-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>Notifs</Text>
               {notifCount > 0 && (
                 <View style={styles.badge}>
@@ -381,26 +386,26 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             </TouchableOpacity>
           )}
           {onOpenDashboard && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenDashboard}>
-              <Text style={styles.footerActionIcon}>📊</Text>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenDashboard} activeOpacity={0.7}>
+              <Ionicons name="bar-chart-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>Stats</Text>
             </TouchableOpacity>
           )}
           {onOpenUpgrade && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenUpgrade}>
-              <Text style={styles.footerActionIcon}>💎</Text>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenUpgrade} activeOpacity={0.7}>
+              <Ionicons name="diamond-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>Abo</Text>
             </TouchableOpacity>
           )}
           {onOpenMedia && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenMedia}>
-              <Text style={styles.footerActionIcon}>📁</Text>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenMedia} activeOpacity={0.7}>
+              <Ionicons name="folder-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>Fichiers</Text>
             </TouchableOpacity>
           )}
           {onOpenProfile && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenProfile}>
-              <Text style={styles.footerActionIcon}>👤</Text>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenProfile} activeOpacity={0.7}>
+              <Ionicons name="person-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>Profil</Text>
             </TouchableOpacity>
           )}
@@ -408,7 +413,8 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
         <Text style={styles.userEmail} numberOfLines={1}>
           {user?.email || ''}
         </Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.7}>
+          <Ionicons name="log-out-outline" size={16} color={colors.error} />
           <Text style={styles.logoutText}>Déconnexion</Text>
         </TouchableOpacity>
       </View>
@@ -423,7 +429,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               value={renameText}
               onChangeText={setRenameText}
               placeholder="Nom de la conversation"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={colors.textTertiary}
               autoFocus
               onSubmitEditing={handleRename}
             />
@@ -431,6 +437,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               <TouchableOpacity
                 style={styles.modalCancelBtn}
                 onPress={() => { setRenameModal(null); setRenameText(''); }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelText}>Annuler</Text>
               </TouchableOpacity>
@@ -438,6 +445,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
                 style={[styles.modalConfirmBtn, !renameText.trim() && styles.modalConfirmDisabled]}
                 onPress={handleRename}
                 disabled={!renameText.trim()}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalConfirmText}>Renommer</Text>
               </TouchableOpacity>
@@ -452,27 +460,22 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0B1A',
+    backgroundColor: colors.sidebar,
   },
   newChatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 8,
-    paddingVertical: 12,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.md,
     paddingHorizontal: 14,
-    backgroundColor: '#6366F1',
-    borderRadius: 10,
-  },
-  newChatIcon: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
+    backgroundColor: colors.accent,
+    borderRadius: radii.sm,
   },
   newChatText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -480,43 +483,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    paddingHorizontal: 12,
-    marginBottom: 8,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
   },
   siteChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#1E1B4B',
+    borderRadius: radii.full,
+    backgroundColor: colors.secondary,
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: colors.border,
   },
   siteChipActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   siteChipText: {
-    color: '#A5B4FC',
+    color: colors.textSecondary,
     fontSize: 12,
     maxWidth: 100,
   },
   siteChipTextActive: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
   },
   searchContainer: {
-    paddingHorizontal: 12,
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+  },
+  searchIcon: {
+    marginRight: spacing.sm,
   },
   searchInput: {
-    backgroundColor: '#1E1B4B',
-    color: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flex: 1,
+    color: colors.text,
+    paddingVertical: spacing.sm,
     fontSize: 14,
-    borderWidth: 1,
-    borderColor: '#312E81',
   },
   loadingContainer: {
     flex: 1,
@@ -524,16 +533,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   list: {
-    paddingHorizontal: 8,
-    paddingTop: 4,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
   },
   swipeContainer: {
     overflow: 'hidden',
-    borderRadius: 8,
+    borderRadius: radii.sm,
     marginBottom: 2,
   },
   swipeContent: {
-    backgroundColor: '#0D0B1A',
+    backgroundColor: colors.sidebar,
   },
   pinAction: {
     position: 'absolute',
@@ -541,12 +550,12 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 80,
-    backgroundColor: '#6366F1',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pinActionText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -556,102 +565,94 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 80,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
   },
   deleteActionText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
   sessionItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
   },
   sessionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  pinIcon: {
-    fontSize: 12,
+    gap: spacing.xs,
   },
   sessionActive: {
-    backgroundColor: '#1E1B4B',
+    backgroundColor: colors.secondary,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
   },
   sessionTitle: {
-    color: '#D1D5DB',
+    color: colors.textSecondary,
     fontSize: 14,
   },
   sessionTitleActive: {
-    color: '#fff',
+    color: colors.text,
     fontWeight: '600',
   },
   sessionDate: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 11,
     marginTop: 2,
   },
   emptyText: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 13,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   footer: {
-    borderTopWidth: 1,
-    borderTopColor: '#1E1B4B',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   creditsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: '#1E1B4B',
-    borderRadius: 8,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.sm,
   },
   creditsLabel: {
-    color: '#A5B4FC',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
   creditsValue: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
   creditsRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  creditsChevron: {
-    color: '#6B7280',
-    fontSize: 18,
-    fontWeight: '600',
+    gap: spacing.xs,
   },
   footerActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: spacing.xs,
     marginBottom: 10,
   },
   footerActionBtn: {
     position: 'relative',
     alignItems: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  footerActionIcon: {
-    fontSize: 20,
+    paddingHorizontal: spacing.sm,
   },
   footerActionLabel: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 10,
     marginTop: 2,
   },
@@ -659,61 +660,66 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
   badgeText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 10,
     fontWeight: '700',
   },
   userEmail: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 12,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   logoutBtn: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
   },
   logoutText: {
-    color: '#EF4444',
+    color: colors.error,
     fontSize: 14,
   },
   // Rename modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxxl,
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#1E1B4B',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: colors.secondary,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalTitle: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   modalInput: {
-    backgroundColor: '#312E81',
-    color: '#fff',
-    borderRadius: 10,
+    backgroundColor: colors.tertiary,
+    color: colors.text,
+    borderRadius: radii.sm,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: '#4338CA',
-    marginBottom: 16,
+    borderColor: colors.borderLight,
+    marginBottom: spacing.lg,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -722,25 +728,25 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.sm,
   },
   modalCancelText: {
-    color: '#6B7280',
+    color: colors.textTertiary,
     fontSize: 15,
     fontWeight: '600',
   },
   modalConfirmBtn: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: '#6366F1',
-    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.accent,
+    borderRadius: radii.sm,
   },
   modalConfirmDisabled: {
     opacity: 0.4,
   },
   modalConfirmText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
   },

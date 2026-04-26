@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,10 +25,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { apiService } from '../services/api';
 import { MediaAttachment, ModelOption } from '../types';
+import { colors, radii, spacing } from '../theme';
 
 const MODEL_OPTIONS: ModelOption[] = [
-  { label: 'Auto', value: null, emoji: '\u26A1' },
-  { label: 'RGPD (Mistral)', value: 'mistral-large-latest', emoji: '\uD83C\uDDEB\uD83C\uDDF7' },
+  { label: 'Auto', value: null, emoji: 'auto' },
+  { label: 'RGPD (Mistral)', value: 'mistral-large-latest', emoji: 'mistral' },
 ];
 
 const MODEL_STORAGE_KEY = 'fc_selected_model';
@@ -40,6 +42,7 @@ interface ChatScreenProps {
 export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const { user } = useAuth();
   const [input, setInput] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelOption>(MODEL_OPTIONS[0]);
@@ -162,8 +165,8 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   if (!sessionId) {
     return (
       <SafeAreaView style={styles.loading}>
-        <ActivityIndicator color="#6366F1" size="large" />
-        <Text style={styles.loadingText}>Connexion à FC-Agent...</Text>
+        <ActivityIndicator color={colors.accent} size="large" />
+        <Text style={styles.loadingText}>Connexion à Flow...</Text>
       </SafeAreaView>
     );
   }
@@ -176,16 +179,20 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         keyboardVerticalOffset={0}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onOpenDrawer} style={styles.hamburger}>
-          <Text style={styles.hamburgerIcon}>☰</Text>
+        <TouchableOpacity onPress={onOpenDrawer} style={styles.headerBtn} activeOpacity={0.7}>
+          <Ionicons name="menu-outline" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{'\u26A1'} FC-Agent</Text>
+        <View style={styles.headerCenter}>
+          <Ionicons name="flash" size={16} color={colors.accent} />
+          <Text style={styles.headerTitle}> Flow</Text>
+        </View>
         <TouchableOpacity
           style={styles.modelBtn}
           onPress={() => setModelModalVisible(true)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
         >
-          <Text style={styles.modelBtnText}>{selectedModel.emoji}</Text>
+          <Ionicons name={selectedModel.value ? 'shield-checkmark-outline' : 'flash'} size={18} color={colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -208,11 +215,12 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
                 key={opt.label}
                 style={[styles.modelRow, selectedModel.value === opt.value && styles.modelRowActive]}
                 onPress={() => pickModel(opt)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.modelEmoji}>{opt.emoji}</Text>
+                <Ionicons name={opt.value ? 'shield-checkmark-outline' : 'flash'} size={20} color={colors.accent} />
                 <Text style={styles.modelLabel}>{opt.label}</Text>
                 {selectedModel.value === opt.value && (
-                  <Text style={styles.modelCheck}>{'\u2713'}</Text>
+                  <Ionicons name="checkmark" size={18} color={colors.accent} />
                 )}
               </TouchableOpacity>
             ))}
@@ -237,15 +245,45 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         ListEmptyComponent={
           isLoadingMessages ? (
             <View style={styles.emptyState}>
-              <ActivityIndicator color="#6366F1" size="small" />
+              <ActivityIndicator color={colors.accent} size="small" />
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>⚡</Text>
-              <Text style={styles.emptyTitle}>FC-Agent est prêt</Text>
-              <Text style={styles.emptySubtitle}>
-                Demandez un audit SEO, un article, une analyse de niche ou toute autre tâche marketing.
-              </Text>
+              <View style={styles.emptyLogoWrap}>
+                <Ionicons name="flash" size={32} color={colors.white} />
+              </View>
+              <Text style={styles.emptyTitle}>Votre équipe marketing IA</Text>
+              <Text style={styles.emptyTagline}>SEO, contenu, prospection, e-commerce, social{'\n'}95+ outils. Une seule conversation.</Text>
+
+              <View style={styles.suggestionsWrap}>
+                <Text style={styles.suggestionsLabel}>ESSAYEZ</Text>
+                <View style={styles.suggestionsGrid}>
+                  <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Audite mon site et donne-moi les quick wins SEO'); }} activeOpacity={0.7}>
+                    <Ionicons name="pulse-outline" size={16} color={colors.accent} />
+                    <Text style={styles.suggestionText}>Auditer mon site SEO</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Écris un article SEO optimisé sur mon domaine'); }} activeOpacity={0.7}>
+                    <Ionicons name="create-outline" size={16} color={colors.accent} />
+                    <Text style={styles.suggestionText}>Rédiger un article SEO</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Trouve des prospects sur Google Maps dans ma niche'); }} activeOpacity={0.7}>
+                    <Ionicons name="locate-outline" size={16} color={colors.accent} />
+                    <Text style={styles.suggestionText}>Trouver des prospects</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Analyse mes concurrents et identifie des opportunités'); }} activeOpacity={0.7}>
+                    <Ionicons name="analytics-outline" size={16} color={colors.accent} />
+                    <Text style={styles.suggestionText}>Analyser la concurrence</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Génère mes posts social media de la semaine'); }} activeOpacity={0.7}>
+                    <Ionicons name="share-social-outline" size={16} color={colors.accent} />
+                    <Text style={styles.suggestionText}>Posts social media</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Optimise mes fiches produits Shopify pour le SEO'); }} activeOpacity={0.7}>
+                    <Ionicons name="cart-outline" size={16} color={colors.accent} />
+                    <Text style={styles.suggestionText}>Optimiser mon e-commerce</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           )
         }
@@ -257,9 +295,9 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
       {/* Thinking indicator */}
       {isTyping && !messages.some((m) => m.isStreaming) && toolCalls.length === 0 && (
         <View style={styles.thinkingBar}>
-          <ActivityIndicator size="small" color="#6366F1" />
+          <ActivityIndicator size="small" color={colors.accent} />
           <Text style={styles.thinkingText} numberOfLines={1}>
-            {thinkingText || 'FC-Agent réfléchit...'}
+            {thinkingText || 'Flow réfléchit...'}
           </Text>
         </View>
       )}
@@ -273,7 +311,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
                 {att.filename}
               </Text>
               <TouchableOpacity onPress={() => removeAttachment(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.attachmentRemove}>✕</Text>
+                <Ionicons name="close" size={14} color={colors.error} />
               </TouchableOpacity>
             </View>
           ))}
@@ -282,39 +320,44 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
 
       {/* Input */}
       <View style={styles.inputRow}>
-        <TouchableOpacity style={styles.attachBtn} onPress={handlePickFile} disabled={uploading}>
+        <TouchableOpacity style={styles.attachBtn} onPress={handlePickFile} disabled={uploading} activeOpacity={0.7}>
           {uploading ? (
-            <ActivityIndicator size="small" color="#6366F1" />
+            <ActivityIndicator size="small" color={colors.accent} />
           ) : (
-            <Text style={styles.attachIcon}>+</Text>
+            <Ionicons name="add-outline" size={22} color={colors.textSecondary} />
           )}
         </TouchableOpacity>
         <TextInput
-          style={styles.input}
+          style={[styles.input, inputFocused && styles.inputFocused]}
           placeholder="Écrivez un message..."
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={colors.textTertiary}
           value={input}
           onChangeText={setInput}
           multiline
           maxLength={4000}
           onSubmitEditing={handleSend}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
         />
         <TouchableOpacity
           style={[styles.micBtn, isListening && styles.micBtnActive]}
           onPress={handleMic}
+          activeOpacity={0.7}
         >
-          <Text style={styles.micIcon}>{isListening ? '⏹' : '🎤'}</Text>
+          <Ionicons name={isListening ? 'stop' : 'mic-outline'} size={18} color={isListening ? colors.white : colors.textSecondary} />
         </TouchableOpacity>
         {isTyping ? (
-          <TouchableOpacity style={styles.stopBtn} onPress={cancelRun}>
-            <Text style={styles.stopIcon}>■</Text>
+          <TouchableOpacity style={styles.stopBtn} onPress={cancelRun} activeOpacity={0.7}>
+            <Ionicons name="stop" size={16} color={colors.white} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={[styles.sendBtn, (!input.trim() && attachments.length === 0) && styles.sendBtnDisabled]}
             onPress={handleSend}
-            disabled={!input.trim() && attachments.length === 0}>
-            <Text style={styles.sendIcon}>↑</Text>
+            disabled={!input.trim() && attachments.length === 0}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-up" size={20} color={colors.white} />
           </TouchableOpacity>
         )}
       </View>
@@ -324,89 +367,102 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
+  container: { flex: 1, backgroundColor: colors.primary },
   flex: { flex: 1 },
-  loading: { flex: 1, backgroundColor: '#0F0E17', justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { color: '#A5B4FC', fontSize: 14 },
+  loading: { flex: 1, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
+  loadingText: { color: colors.textSecondary, fontSize: 14 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#1E1B4B', borderBottomWidth: 1, borderBottomColor: '#312E81',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    backgroundColor: 'transparent',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
-  hamburger: {
+  headerBtn: {
     width: 36,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  hamburgerIcon: { color: '#fff', fontSize: 22 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
   modelBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#312E81', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.tertiary, justifyContent: 'center', alignItems: 'center',
   },
-  modelBtnText: { fontSize: 18 },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    flex: 1, backgroundColor: colors.overlay,
     justifyContent: 'center', alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1E1B4B', borderRadius: 16, padding: 20,
-    width: 260,
+    backgroundColor: colors.secondary, borderRadius: radii.lg, padding: spacing.xl,
+    width: 260, borderWidth: 1, borderColor: colors.border,
   },
-  modalTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
+  modalTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: spacing.lg, textAlign: 'center' },
   modelRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, paddingHorizontal: 12, borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.md, borderRadius: radii.sm,
   },
-  modelRowActive: { backgroundColor: '#312E81' },
-  modelEmoji: { fontSize: 20 },
-  modelLabel: { color: '#fff', fontSize: 15, flex: 1 },
-  modelCheck: { color: '#6366F1', fontSize: 18, fontWeight: '700' },
-  messageList: { paddingVertical: 12, flexGrow: 1 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 80, gap: 12 },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  emptySubtitle: { color: '#6B7280', fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  modelRowActive: { backgroundColor: colors.tertiary },
+  modelLabel: { color: colors.text, fontSize: 15, flex: 1 },
+  messageList: { paddingVertical: spacing.md, flexGrow: 1 },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, paddingTop: 24, gap: spacing.sm },
+  emptyLogoWrap: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  emptyTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  emptyTagline: { color: colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 19, marginBottom: spacing.sm },
+  suggestionsWrap: { width: '100%', marginTop: spacing.sm },
+  suggestionsLabel: { color: colors.textTertiary, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: spacing.sm, marginLeft: spacing.xs },
+  suggestionsGrid: { gap: spacing.sm },
+  suggestionChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.secondary, borderRadius: radii.md,
+    paddingVertical: 11, paddingHorizontal: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  suggestionText: { color: colors.text, fontSize: 13, fontWeight: '500' },
   thinkingBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 8,
-    backgroundColor: '#1E1B4B', borderTopWidth: 1, borderTopColor: '#312E81',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    backgroundColor: colors.secondary, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
-  thinkingText: { color: '#A5B4FC', fontSize: 12, flex: 1 },
+  thinkingText: { color: colors.textSecondary, fontSize: 12, flex: 1 },
   attachmentBar: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 6,
-    paddingHorizontal: 12, paddingTop: 8,
-    backgroundColor: '#1E1B4B', borderTopWidth: 1, borderTopColor: '#312E81',
+    paddingHorizontal: spacing.md, paddingTop: spacing.sm,
+    backgroundColor: colors.secondary, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
   attachmentChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#312E81', borderRadius: 8,
+    backgroundColor: colors.tertiary, borderRadius: radii.sm,
     paddingHorizontal: 10, paddingVertical: 6, maxWidth: 200,
   },
-  attachmentName: { color: '#A5B4FC', fontSize: 12, flex: 1 },
-  attachmentRemove: { color: '#EF4444', fontSize: 14, fontWeight: '700' },
+  attachmentName: { color: colors.textSecondary, fontSize: 12, flex: 1 },
   attachBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#312E81', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.tertiary, justifyContent: 'center', alignItems: 'center',
   },
-  attachIcon: { color: '#A5B4FC', fontSize: 22, fontWeight: '600' },
   inputRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: '#1E1B4B', borderTopWidth: 1, borderTopColor: '#312E81',
+    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
+    paddingHorizontal: spacing.md, paddingVertical: 10,
+    backgroundColor: colors.primary, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
   input: {
-    flex: 1, backgroundColor: '#312E81', color: '#fff', borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 120,
-    borderWidth: 1, borderColor: '#4338CA',
+    flex: 1, backgroundColor: colors.tertiary, color: colors.text, borderRadius: radii.xxl,
+    paddingHorizontal: spacing.lg, paddingVertical: 10, fontSize: 15, maxHeight: 120,
+    borderWidth: 1, borderColor: colors.borderLight,
+  },
+  inputFocused: {
+    borderColor: colors.accent,
   },
   micBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  micBtnActive: { backgroundColor: '#EF4444' },
-  micIcon: { fontSize: 18 },
-  sendBtn: { backgroundColor: '#6366F1', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  sendBtnDisabled: { backgroundColor: '#312E81' },
-  sendIcon: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  stopBtn: { backgroundColor: '#EF4444', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  stopIcon: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  micBtnActive: { backgroundColor: colors.error },
+  sendBtn: { backgroundColor: colors.accent, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  sendBtnDisabled: { backgroundColor: colors.tertiary },
+  stopBtn: { backgroundColor: colors.error, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
 });

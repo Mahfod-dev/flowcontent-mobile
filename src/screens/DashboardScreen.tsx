@@ -9,9 +9,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { DashboardData } from '../types';
+import { colors, commonStyles, radii, shadows, spacing } from '../theme';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -73,24 +75,24 @@ export function DashboardScreen({ onBack }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <TouchableOpacity onPress={handleRefresh} style={styles.backBtn}>
-          <Text style={styles.backIcon}>↻</Text>
+        <Text style={commonStyles.headerTitle}>Dashboard</Text>
+        <TouchableOpacity onPress={handleRefresh} style={commonStyles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="refresh-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#6366F1" size="large" />
+        <View style={commonStyles.loadingContainer}>
+          <ActivityIndicator color={colors.accent} size="large" />
         </View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#6366F1" />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
           }
         >
           {/* Credits & Alerts row */}
@@ -98,7 +100,7 @@ export function DashboardScreen({ onBack }: Props) {
             <View style={styles.creditsCard}>
               <Text style={styles.miniTitle}>CRÉDITS · {creditPlan.toUpperCase()}</Text>
               <View style={styles.creditsValueRow}>
-                <Text style={styles.creditsEmoji}>🪙</Text>
+                <Ionicons name="wallet-outline" size={16} color={colors.accent} />
                 <Text style={styles.creditsBig}>{creditBalance.toLocaleString()}</Text>
                 <Text style={styles.creditsTotal}>/ {creditTotal.toLocaleString()}</Text>
               </View>
@@ -114,7 +116,7 @@ export function DashboardScreen({ onBack }: Props) {
               <Text style={styles.miniTitle}>ALERTES</Text>
               {urgentAlerts.total > 0 ? (
                 <View style={styles.alertBadge}>
-                  <Text style={styles.alertIcon}>⚠️</Text>
+                  <Ionicons name="warning-outline" size={14} color={colors.error} />
                   <Text style={styles.alertCount}>{urgentAlerts.total} urgente{urgentAlerts.total > 1 ? 's' : ''}</Text>
                 </View>
               ) : (
@@ -129,7 +131,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Stats grid - 6 cards like web */}
           {data?.stats && (
             <>
-              <Text style={styles.sectionTitle}>Statistiques</Text>
+              <Text style={styles.sectionTitle}>STATISTIQUES</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{data.stats.articlesGenerated}</Text>
@@ -166,7 +168,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Generation Metrics */}
           {metrics && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Métriques de génération</Text>
+              <Text style={styles.sectionTitle}>MÉTRIQUES DE GÉNÉRATION</Text>
               <View style={styles.metricsCard}>
                 <View style={styles.metricRow}>
                   <Text style={styles.metricLabel}>Temps moyen / article</Text>
@@ -181,7 +183,7 @@ export function DashboardScreen({ onBack }: Props) {
                   </Text>
                 </View>
                 {metrics.peakGenerationTimes?.length > 0 && (
-                  <View style={styles.metricRow}>
+                  <View style={[styles.metricRow, { borderBottomWidth: 0 }]}>
                     <Text style={styles.metricLabel}>Pics de génération</Text>
                     <Text style={styles.metricValue}>
                       {metrics.peakGenerationTimes.map((p: any) => `${p.hour}h`).join(', ')}
@@ -195,7 +197,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Daily Tasks */}
           {dailyTasks && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tâches du jour</Text>
+              <Text style={styles.sectionTitle}>TÂCHES DU JOUR</Text>
               {(() => {
                 const allTasks = dailyTasks.top_tasks ?? dailyTasks.all_tasks ?? [];
                 const activeTasks = allTasks.filter((t: any) => t.status === 'pending' || t.status === 'in_progress');
@@ -216,7 +218,7 @@ export function DashboardScreen({ onBack }: Props) {
                       <View style={styles.tasksHeader}>
                         <Text style={styles.tasksProgress}>{completedCount}/{totalCount} complétées</Text>
                         <View style={styles.progressBar}>
-                          <View style={[styles.progressFill, styles.progressPurple, { width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }]} />
+                          <View style={[styles.progressFill, styles.progressAccent, { width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }]} />
                         </View>
                       </View>
                     )}
@@ -226,7 +228,7 @@ export function DashboardScreen({ onBack }: Props) {
                     {activeTasks.slice(0, 5).map((task: any) => (
                       <View key={task.id} style={styles.taskRow}>
                         <View style={[styles.priorityDot, {
-                          backgroundColor: task.priority === 'high' ? '#EF4444' : task.priority === 'medium' ? '#F97316' : '#6B7280'
+                          backgroundColor: task.priority === 'high' ? colors.error : task.priority === 'medium' ? colors.warning : colors.textTertiary
                         }]} />
                         <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
                         {task.estimated_duration_minutes > 0 && (
@@ -243,7 +245,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Recent activity */}
           {data?.recentActivity && data.recentActivity.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Activité récente</Text>
+              <Text style={styles.sectionTitle}>ACTIVITÉ RÉCENTE</Text>
               {data.recentActivity.slice(0, 8).map((activity) => (
                 <View key={activity.id} style={styles.activityRow}>
                   <View style={styles.activityInfo}>
@@ -258,7 +260,11 @@ export function DashboardScreen({ onBack }: Props) {
                     styles.statusBadge,
                     activity.type === 'success' ? styles.statusCompleted : styles.statusFailed,
                   ]}>
-                    <Text style={styles.statusText}>{activity.type === 'success' ? '✓' : '✗'}</Text>
+                    <Ionicons
+                      name={activity.type === 'success' ? 'checkmark' : 'close'}
+                      size={14}
+                      color={colors.white}
+                    />
                   </View>
                 </View>
               ))}
@@ -268,7 +274,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Domain stats */}
           {data?.domainStats && data.domainStats.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Stats par domaine</Text>
+              <Text style={styles.sectionTitle}>STATS PAR DOMAINE</Text>
               {data.domainStats.map((ds) => (
                 <View key={ds.domain} style={styles.domainCard}>
                   <Text style={styles.domainName} numberOfLines={1}>{ds.domain}</Text>
@@ -277,7 +283,7 @@ export function DashboardScreen({ onBack }: Props) {
                     <Text style={styles.domainStat}>{ds.images} img.</Text>
                     {(ds as any).videos > 0 && <Text style={styles.domainStat}>{(ds as any).videos} vid.</Text>}
                     {(ds as any).audios > 0 && <Text style={styles.domainStat}>{(ds as any).audios} aud.</Text>}
-                    <Text style={[styles.domainStat, { color: ds.successRate > 80 ? '#22C55E' : '#F97316' }]}>
+                    <Text style={[styles.domainStat, { color: ds.successRate > 80 ? colors.success : colors.warning }]}>
                       {ds.successRate}%
                     </Text>
                   </View>
@@ -288,7 +294,7 @@ export function DashboardScreen({ onBack }: Props) {
 
           {!data && !credits && !dailyTasks && (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📊</Text>
+              <Ionicons name="bar-chart-outline" size={48} color={colors.textTertiary} />
               <Text style={styles.emptyText}>Aucune donnée disponible</Text>
             </View>
           )}
@@ -299,101 +305,91 @@ export function DashboardScreen({ onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
+  container: { flex: 1, backgroundColor: colors.primary },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#1E1B4B', borderBottomWidth: 1, borderBottomColor: '#312E81',
+    ...commonStyles.header,
   },
-  backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  backIcon: { color: '#fff', fontSize: 22 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: spacing.lg, paddingBottom: 40 },
 
   // Credits & Alerts
-  creditsAlertRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  creditsAlertRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   creditsCard: {
-    flex: 2, backgroundColor: '#1E1B4B', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#312E81',
+    flex: 2, backgroundColor: colors.secondary, borderRadius: radii.md, padding: 14,
+    borderWidth: 1, borderColor: colors.border, ...shadows.subtle,
   },
   alertsCard: {
-    flex: 1, backgroundColor: '#1E1B4B', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#312E81', justifyContent: 'center',
+    flex: 1, backgroundColor: colors.secondary, borderRadius: radii.md, padding: 14,
+    borderWidth: 1, borderColor: colors.border, justifyContent: 'center', ...shadows.subtle,
   },
-  miniTitle: { color: '#6B7280', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8 },
-  creditsValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4, marginBottom: 8 },
-  creditsEmoji: { fontSize: 16 },
-  creditsBig: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  creditsTotal: { color: '#6B7280', fontSize: 12 },
-  progressBar: { height: 4, backgroundColor: '#312E81', borderRadius: 4, overflow: 'hidden' },
+  miniTitle: { color: colors.textTertiary, fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.sm },
+  creditsValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginBottom: spacing.sm },
+  creditsBig: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  creditsTotal: { color: colors.textTertiary, fontSize: 12 },
+  progressBar: { height: 4, backgroundColor: colors.tertiary, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
-  progressGreen: { backgroundColor: '#22C55E' },
-  progressOrange: { backgroundColor: '#F97316' },
-  progressRed: { backgroundColor: '#EF4444' },
-  progressPurple: { backgroundColor: '#6366F1' },
-  alertBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: 8 },
-  alertIcon: { fontSize: 14 },
-  alertCount: { color: '#EF4444', fontSize: 12, fontWeight: '600' },
+  progressGreen: { backgroundColor: colors.success },
+  progressOrange: { backgroundColor: colors.warning },
+  progressRed: { backgroundColor: colors.error },
+  progressAccent: { backgroundColor: colors.accent },
+  alertBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.errorMuted, borderRadius: radii.sm, padding: spacing.sm },
+  alertCount: { color: colors.error, fontSize: 12, fontWeight: '600' },
   allClear: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
-  allClearText: { color: '#6B7280', fontSize: 12 },
+  greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
+  allClearText: { color: colors.textTertiary, fontSize: 12 },
 
   // Stats
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.xl },
   statCard: {
-    width: '31%', backgroundColor: '#1E1B4B', borderRadius: 12,
+    width: '31%', backgroundColor: colors.secondary, borderRadius: radii.md,
     padding: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: '#312E81',
+    borderWidth: 1, borderColor: colors.border, ...shadows.subtle,
   },
-  statValue: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  statLabel: { color: '#A5B4FC', fontSize: 11, marginTop: 4, textAlign: 'center' },
+  statValue: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  statLabel: { color: colors.textSecondary, fontSize: 11, marginTop: spacing.xs, textAlign: 'center' },
 
   // Sections
-  section: { marginBottom: 20 },
-  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  section: { marginBottom: spacing.xl },
+  sectionTitle: { color: colors.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.md },
 
   // Metrics
-  metricsCard: { backgroundColor: '#1E1B4B', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#312E81' },
-  metricRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#312E81' },
-  metricLabel: { color: '#A5B4FC', fontSize: 13 },
-  metricValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  metricsCard: { backgroundColor: colors.secondary, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border },
+  metricRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  metricLabel: { color: colors.textSecondary, fontSize: 13 },
+  metricValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
 
   // Daily Tasks
-  tasksCard: { backgroundColor: '#1E1B4B', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#312E81' },
+  tasksCard: { backgroundColor: colors.secondary, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border },
   tasksHeader: { marginBottom: 10 },
-  tasksProgress: { color: '#6B7280', fontSize: 12, marginBottom: 6 },
-  aiSummary: { color: '#6B7280', fontSize: 12, fontStyle: 'italic', marginBottom: 10 },
-  taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#312E81' },
+  tasksProgress: { color: colors.textTertiary, fontSize: 12, marginBottom: 6 },
+  aiSummary: { color: colors.textTertiary, fontSize: 12, fontStyle: 'italic', marginBottom: 10 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   priorityDot: { width: 6, height: 6, borderRadius: 3 },
-  taskTitle: { color: '#fff', fontSize: 13, flex: 1 },
-  taskDuration: { color: '#6B7280', fontSize: 11 },
+  taskTitle: { color: colors.text, fontSize: 13, flex: 1 },
+  taskDuration: { color: colors.textTertiary, fontSize: 11 },
 
   // Activity
   activityRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#1E1B4B', borderRadius: 10, padding: 12, marginBottom: 6,
+    backgroundColor: colors.secondary, borderRadius: radii.sm, padding: spacing.md, marginBottom: 6,
   },
-  activityInfo: { flex: 1, marginRight: 12 },
-  activityTitle: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  activityMeta: { color: '#6B7280', fontSize: 11, marginTop: 2 },
+  activityInfo: { flex: 1, marginRight: spacing.md },
+  activityTitle: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  activityMeta: { color: colors.textTertiary, fontSize: 11, marginTop: 2 },
   statusBadge: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
-  statusCompleted: { backgroundColor: '#065F46' },
-  statusFailed: { backgroundColor: '#7F1D1D' },
-  statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  statusCompleted: { backgroundColor: colors.successMuted },
+  statusFailed: { backgroundColor: colors.errorMuted },
 
   // Domain stats
   domainCard: {
-    backgroundColor: '#1E1B4B', borderRadius: 10, padding: 12, marginBottom: 6,
+    backgroundColor: colors.secondary, borderRadius: radii.sm, padding: spacing.md, marginBottom: 6,
   },
-  domainName: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 6 },
-  domainStatsRow: { flexDirection: 'row', gap: 12 },
-  domainStat: { color: '#A5B4FC', fontSize: 12 },
+  domainName: { color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 6 },
+  domainStatsRow: { flexDirection: 'row', gap: spacing.md },
+  domainStat: { color: colors.textSecondary, fontSize: 12 },
 
   // Empty
-  emptySmall: { backgroundColor: '#1E1B4B', borderRadius: 12, padding: 20, alignItems: 'center' },
-  emptySmallText: { color: '#6B7280', fontSize: 13 },
-  empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyIcon: { fontSize: 48 },
-  emptyText: { color: '#6B7280', fontSize: 14 },
+  emptySmall: { backgroundColor: colors.secondary, borderRadius: radii.md, padding: spacing.xl, alignItems: 'center' },
+  emptySmallText: { color: colors.textTertiary, fontSize: 13 },
+  empty: { alignItems: 'center', paddingTop: 80, gap: spacing.md },
+  emptyText: { color: colors.textTertiary, fontSize: 14 },
 });
