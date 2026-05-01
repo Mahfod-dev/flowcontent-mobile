@@ -35,5 +35,17 @@
         "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
       }
     }
+  },
+  "submit": {
+    "preview": {
+      "ios": {
+        "ascAppId": "com.flowcontent.app"
+      }
+    },
+    "production": {
+      "ios": {
+        "ascAppId": "com.flowcontent.app"
+      }
+    }
   }
 }
