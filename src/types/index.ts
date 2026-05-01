@@ -99,6 +99,8 @@ export interface DomainStat {
   domain: string;
   articles: number;
   images: number;
+  videos?: number;
+  audios?: number;
   successRate: number;
 }
 

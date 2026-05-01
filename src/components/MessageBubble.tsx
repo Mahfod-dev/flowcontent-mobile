@@ -1,11 +1,26 @@
-import React, { memo, useState } from 'react';
-import { Alert, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { memo, useMemo, useState } from 'react';
+import { Alert, Dimensions, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { Message } from '../types';
 import { colors, markdownTheme, radii, spacing } from '../theme';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+// Max bubble width ≈ 92% of screen minus padding
+const MAX_TABLE_WIDTH = SCREEN_WIDTH * 0.92 - 40;
+
+/** Clean up markdown quirks that react-native-markdown-display can't parse */
+function sanitizeMarkdown(text: string): string {
+  return text
+    // Remove orphan reference links [text][ref] → text
+    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
+    // Remove empty links [text]() → text
+    .replace(/\[([^\]]+)\]\(\s*\)/g, '$1')
+    // Remove bare brackets [text] that aren't followed by ( or [  (not real links)
+    .replace(/\[([^\]]+)\](?!\(|\[)/g, '$1');
+}
 
 // Stable render rules — defined outside component to avoid re-renders during streaming
 const MARKDOWN_RENDER_RULES = {
@@ -31,16 +46,34 @@ const MARKDOWN_RENDER_RULES = {
       <Text style={codeBlockStyles.codeText}>{node.content}</Text>
     </ScrollView>
   ),
-  table: (node: any, children: any, parent: any, styles: any) => (
-    <ScrollView
-      key={node.key}
-      horizontal
-      showsHorizontalScrollIndicator
-      style={tableStyles.scrollContainer}
-    >
-      <View style={tableStyles.table}>{children}</View>
-    </ScrollView>
-  ),
+  table: (node: any, children: any, parent: any, styles: any) => {
+    // Count columns from first row to determine if we need horizontal scroll
+    const firstRow = node.children?.[0]?.children || node.children?.[1]?.children?.[0]?.children || [];
+    const colCount = firstRow.length || 1;
+    const needsScroll = colCount > 3;
+
+    const tableContent = (
+      <View style={[tableStyles.table, !needsScroll && { width: '100%' }]}>{children}</View>
+    );
+
+    if (needsScroll) {
+      return (
+        <ScrollView
+          key={node.key}
+          horizontal
+          showsHorizontalScrollIndicator
+          style={tableStyles.scrollContainer}
+        >
+          {tableContent}
+        </ScrollView>
+      );
+    }
+    return (
+      <View key={node.key} style={tableStyles.scrollContainer}>
+        {tableContent}
+      </View>
+    );
+  },
   tr: (node: any, children: any, parent: any, styles: any) => (
     <View key={node.key} style={tableStyles.tr}>{children}</View>
   ),
@@ -70,11 +103,19 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
 
+  // Sanitize markdown once per content change (removes broken brackets, bad links)
+  const displayContent = useMemo(
+    () => isUser ? message.content : sanitizeMarkdown(message.content) + (message.isStreaming ? ' \u258C' : ''),
+    [isUser, message.content, message.isStreaming],
+  );
+
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(message.content);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await Clipboard.setStringAsync(message.content);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
   };
 
   const handleLongPress = () => {
@@ -123,7 +164,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
           ) : (
             <View style={styles.markdownWrap}>
               <Markdown style={markdownTheme} rules={MARKDOWN_RENDER_RULES} onLinkPress={handleLinkPress}>
-                {message.content + (message.isStreaming ? ' \u258C' : '')}
+                {displayContent}
               </Markdown>
             </View>
           )}
@@ -241,24 +282,28 @@ const tableStyles = StyleSheet.create({
     borderColor: colors.border,
   },
   th: {
+    flex: 1,
     backgroundColor: colors.tertiary,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    minWidth: 100,
+    paddingHorizontal: 10,
+    minWidth: 70,
   },
   thText: {
     color: colors.text,
     fontWeight: '600',
     fontSize: 12.5,
+    flexWrap: 'wrap',
   },
   td: {
+    flex: 1,
     paddingVertical: 7,
-    paddingHorizontal: 12,
-    minWidth: 100,
+    paddingHorizontal: 10,
+    minWidth: 70,
     backgroundColor: 'transparent',
   },
   tdText: {
     color: colors.text,
     fontSize: 13,
+    flexWrap: 'wrap',
   },
 });

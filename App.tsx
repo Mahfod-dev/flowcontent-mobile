@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
@@ -169,14 +170,18 @@ function AppContent() {
     [closeDrawer]
   );
 
+  const creatingSessionRef = useRef(false);
   const handleNewChat = useCallback(async () => {
-    if (!user?.token) return;
+    if (!user?.token || creatingSessionRef.current) return;
+    creatingSessionRef.current = true;
     try {
       const result = await apiService.getOrCreateSession(user.token);
       setSessionId(result.sessionId);
       closeDrawer();
     } catch (e) {
       console.error('Failed to create session', e);
+    } finally {
+      creatingSessionRef.current = false;
     }
   }, [user?.token, closeDrawer]);
 
@@ -244,10 +249,12 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <AppContent />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <StatusBar style="light" />
+          <AppContent />
+        </AuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

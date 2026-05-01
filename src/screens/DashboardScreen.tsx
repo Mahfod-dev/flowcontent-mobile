@@ -281,8 +281,8 @@ export function DashboardScreen({ onBack }: Props) {
                   <View style={styles.domainStatsRow}>
                     <Text style={styles.domainStat}>{ds.articles} art.</Text>
                     <Text style={styles.domainStat}>{ds.images} img.</Text>
-                    {(ds as any).videos > 0 && <Text style={styles.domainStat}>{(ds as any).videos} vid.</Text>}
-                    {(ds as any).audios > 0 && <Text style={styles.domainStat}>{(ds as any).audios} aud.</Text>}
+                    {(ds.videos ?? 0) > 0 && <Text style={styles.domainStat}>{ds.videos} vid.</Text>}
+                    {(ds.audios ?? 0) > 0 && <Text style={styles.domainStat}>{ds.audios} aud.</Text>}
                     <Text style={[styles.domainStat, { color: ds.successRate > 80 ? colors.success : colors.warning }]}>
                       {ds.successRate}%
                     </Text>

@@ -52,12 +52,14 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
 
   // Restore persisted model choice
   useEffect(() => {
+    let cancelled = false;
     AsyncStorage.getItem(MODEL_STORAGE_KEY).then((v) => {
-      if (v) {
+      if (!cancelled && v) {
         const found = MODEL_OPTIONS.find((m) => m.value === v);
         if (found) setSelectedModel(found);
       }
     });
+    return () => { cancelled = true; };
   }, []);
 
   const pickModel = (opt: ModelOption) => {
@@ -118,13 +120,15 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     };
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() && attachments.length === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     isNearBottomRef.current = true; // Force scroll to bottom after sending
-    sendMessage(input.trim(), attachments.length > 0 ? attachments : undefined, selectedModel.value);
+    const text = input.trim();
+    const media = attachments.length > 0 ? [...attachments] : undefined;
     setInput('');
     setAttachments([]);
+    await sendMessage(text, media, selectedModel.value);
   };
 
   const handlePickFile = () => {
@@ -169,12 +173,13 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     setUploading(true);
     try {
       const data = await apiService.uploadFile(user.token, uri, name, mimeType);
-      if (data.attachment) {
-        setAttachments((prev) => [...prev, data.attachment]);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (!data?.attachment) {
+        throw new Error('Réponse invalide du serveur');
       }
+      setAttachments((prev) => [...prev, data.attachment]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      Alert.alert('Erreur upload', err.message);
+      Alert.alert('Erreur upload', err.message || 'Erreur inconnue');
     } finally {
       setUploading(false);
     }

@@ -17,8 +17,50 @@ async function safeJson(res: Response): Promise<any> {
 // Global 401 handler — triggers auto-logout from any API call
 let _onTokenExpired: (() => void) | null = null;
 
+// Callback to update token in AuthContext after refresh
+let _onTokenRefreshed: ((token: string) => void) | null = null;
+
 // Active site domain — set by site switcher, sent as X-Site-Domain header
 let _activeSiteDomain: string | null = null;
+
+// Prevent concurrent refresh attempts
+let _refreshPromise: Promise<string | null> | null = null;
+// Flag to prevent stale refresh callbacks after logout
+let _loggedOut = false;
+
+async function tryRefreshToken(): Promise<string | null> {
+  if (_loggedOut) return null;
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    try {
+      const refreshToken = await SecureStore.getItemAsync('fc_refresh_token');
+      if (!refreshToken || _loggedOut) return null;
+
+      const res = await fetch(`${API_URL}/api/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok || _loggedOut) return null;
+      const data = await safeJson(res);
+      if (!data?.access_token || !data?.refresh_token || _loggedOut) return null;
+
+      // Persist new tokens
+      await SecureStore.setItemAsync('fc_token', data.access_token);
+      await SecureStore.setItemAsync('fc_refresh_token', data.refresh_token);
+
+      // Notify AuthContext to update user.token + reconnect socket
+      if (!_loggedOut && _onTokenRefreshed) _onTokenRefreshed(data.access_token);
+
+      return _loggedOut ? null : data.access_token;
+    } catch {
+      return null;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
 
 async function authFetch(url: string, token: string, init?: RequestInit, critical = true): Promise<Response> {
   const headers: Record<string, string> = {
@@ -29,14 +71,31 @@ async function authFetch(url: string, token: string, init?: RequestInit, critica
     headers['X-Site-Domain'] = _activeSiteDomain;
   }
   const res = await fetch(url, { ...init, headers });
-  if (res.status === 401 && _onTokenExpired && critical) {
-    _onTokenExpired();
+
+  // Auto-refresh on 401
+  if (res.status === 401 && critical) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      // Retry the original request with the new token
+      const retryHeaders: Record<string, string> = {
+        ...(init?.headers as Record<string, string> || {}),
+        Authorization: `Bearer ${newToken}`,
+      };
+      if (_activeSiteDomain) {
+        retryHeaders['X-Site-Domain'] = _activeSiteDomain;
+      }
+      return fetch(url, { ...init, headers: retryHeaders });
+    }
+    // Refresh failed — force logout
+    if (_onTokenExpired) _onTokenExpired();
   }
+
   return res;
 }
 
 export const apiService = {
   setOnTokenExpired(cb: () => void) { _onTokenExpired = cb; },
+  setOnTokenRefreshed(cb: ((token: string) => void) | null) { _onTokenRefreshed = cb; },
 
   setActiveSiteDomain(domain: string | null) { _activeSiteDomain = domain; },
   getActiveSiteDomain(): string | null { return _activeSiteDomain; },
@@ -175,14 +234,26 @@ export const apiService = {
       name: fileName,
       type: mimeType,
     } as any);
-    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-    if (_activeSiteDomain) headers['X-Site-Domain'] = _activeSiteDomain;
-    const res = await fetch(`${API_URL}/api/fc-agent/files/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    if (res.status === 401 && _onTokenExpired) _onTokenExpired();
+
+    const doUpload = async (t: string) => {
+      const headers: Record<string, string> = { Authorization: `Bearer ${t}` };
+      if (_activeSiteDomain) headers['X-Site-Domain'] = _activeSiteDomain;
+      return fetch(`${API_URL}/api/fc-agent/files/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+    };
+
+    let res = await doUpload(token);
+    if (res.status === 401) {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        res = await doUpload(newToken);
+      } else {
+        if (_onTokenExpired) _onTokenExpired();
+      }
+    }
     if (!res.ok) {
       const err = await safeJson(res) ?? {};
       throw new Error(err.message || `Upload failed (${res.status})`);
@@ -493,6 +564,7 @@ export const apiService = {
   },
 
   async saveToken(token: string) {
+    _loggedOut = false; // Reset logout flag on new login
     await SecureStore.setItemAsync('fc_token', token);
     // Clean up legacy plaintext token from AsyncStorage (migration)
     AsyncStorage.removeItem('fc_token').catch(() => {});
@@ -512,8 +584,24 @@ export const apiService = {
     return null;
   },
 
+  async saveRefreshToken(refreshToken: string) {
+    await SecureStore.setItemAsync('fc_refresh_token', refreshToken);
+  },
+
   async clearToken() {
+    _loggedOut = true; // Prevent stale refresh callbacks
     await SecureStore.deleteItemAsync('fc_token');
+    await SecureStore.deleteItemAsync('fc_refresh_token');
     AsyncStorage.removeItem('fc_token').catch(() => {});
+  },
+
+  async revokeRefreshToken(refreshToken: string) {
+    try {
+      await fetch(`${API_URL}/api/auth/revoke-refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch {}
   },
 };

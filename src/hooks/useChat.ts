@@ -318,7 +318,9 @@ export function useChat(sessionId: string, userId: string) {
       gotStreamEventRef.current = false;
 
       try {
-        const token = tokenRef.current;
+        // Always read fresh token (may have been rotated by refresh-token flow)
+        const token = await apiService.getToken();
+        tokenRef.current = token;
         if (!token) throw new Error('Non authentifié');
         const body: any = { message: text };
         if (media?.length) body.media = media;

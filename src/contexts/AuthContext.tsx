@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
 import { User } from '../types';
@@ -29,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const pushTokenRef = useRef<string | null>(null);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     // Fire-and-forget: unregister push token
     const pushToken = pushTokenRef.current;
     if (pushToken) {
@@ -39,8 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       pushTokenRef.current = null;
       AsyncStorage.removeItem('fc_expo_push_token').catch(() => {});
     }
-    apiService.clearToken();
+    // Revoke refresh token server-side before clearing
+    try {
+      const rt = await SecureStore.getItemAsync('fc_refresh_token');
+      if (rt) apiService.revokeRefreshToken(rt);
+    } catch {}
+    // Disconnect socket BEFORE clearing token (socket may need token for clean shutdown)
     socketService.disconnect();
+    apiService.clearToken();
     setUser(null);
   }, []);
 
@@ -48,6 +55,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     apiService.setOnTokenExpired(logout);
   }, [logout]);
+
+  // Token refresh callback — update user state + reconnect socket with new JWT
+  useEffect(() => {
+    apiService.setOnTokenRefreshed((newToken: string) => {
+      setUser((prev) => prev ? { ...prev, token: newToken } : prev);
+      socketService.disconnect();
+      socketService.connect(newToken);
+    });
+    return () => apiService.setOnTokenRefreshed(null);
+  }, []);
 
   // Restore session on app start — validate token with /api/auth/me
   useEffect(() => {
@@ -97,9 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const data = await apiService.login(email, password);
-    const { access_token, user: userData } = data;
+    const { access_token, user: userData, refresh_token } = data;
     if (!access_token) throw new Error('Pas de token dans la réponse');
     await apiService.saveToken(access_token);
+    if (refresh_token) await apiService.saveRefreshToken(refresh_token);
     socketService.connect(access_token);
     setUser({ ...userData, token: access_token });
   };
@@ -109,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = data.token || data.access_token;
     if (!token) throw new Error('Pas de token dans la réponse');
     await apiService.saveToken(token);
+    if (data.refresh_token) await apiService.saveRefreshToken(data.refresh_token);
     socketService.connect(token);
     const u = data.user || {};
     setUser({ id: u.id || '', email: u.email || '', name: u.name, token });
@@ -119,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = data.token || data.access_token;
     if (!token) throw new Error('Pas de token dans la réponse');
     await apiService.saveToken(token);
+    if (data.refresh_token) await apiService.saveRefreshToken(data.refresh_token);
     socketService.connect(token);
     const u = data.user || {};
     setUser({ id: u.id || '', email: u.email || '', name: u.name, token });

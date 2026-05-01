@@ -124,11 +124,13 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
 
   // Load pinned sessions from AsyncStorage
   useEffect(() => {
+    let cancelled = false;
     AsyncStorage.getItem(PINNED_KEY).then((raw) => {
-      if (raw) {
+      if (!cancelled && raw) {
         try { setPinnedIds(new Set(JSON.parse(raw))); } catch {}
       }
     });
+    return () => { cancelled = true; };
   }, []);
 
   const togglePin = useCallback(async (sessionId: string) => {

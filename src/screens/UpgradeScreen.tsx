@@ -229,7 +229,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                 <View key={plan.id} style={[styles.planCard, isCurrent && styles.planCardCurrent]}>
                   <View style={styles.planCardHeader}>
                     <Text style={styles.planCardName}>{plan.name}</Text>
-                    <Text style={styles.planCardPrice}>{plan.price}EUR/mois</Text>
+                    <Text style={styles.planCardPrice}>{plan.price}€/mois</Text>
                   </View>
                   <Text style={styles.planCardCredits}>{plan.credits} credits/mois</Text>
                   {plan.features && plan.features.length > 0 && (
@@ -275,7 +275,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                 <View key={pack.id} style={styles.packCard}>
                   <Text style={styles.packCredits}>{pack.credits}</Text>
                   <Text style={styles.packCreditsLabel}>credits</Text>
-                  <Text style={styles.packPrice}>{pack.price}EUR</Text>
+                  <Text style={styles.packPrice}>{pack.price}€</Text>
                   <TouchableOpacity
                     style={styles.packBuyBtn}
                     onPress={() => handlePurchasePack(pack.id)}
