@@ -69,8 +69,12 @@ export function NotificationsScreen({ onBack }: Props) {
 
   const handleMarkAllRead = async () => {
     if (!user?.token) return;
-    await apiService.markAllNotificationsRead(user.token);
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      const ok = await apiService.markAllNotificationsRead(user.token);
+      if (ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      }
+    } catch {}
   };
 
   const renderNotification = ({ item }: { item: AppNotification }) => (

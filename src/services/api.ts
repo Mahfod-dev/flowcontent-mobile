@@ -219,12 +219,20 @@ export const apiService = {
   },
 
   async markNotificationRead(token: string, id: string): Promise<boolean> {
-    const res = await authFetch(`${API_URL}/api/notifications/${id}/read`, token, { method: 'POST' }, false);
+    const res = await authFetch(`${API_URL}/api/notifications/${id}/read`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    }, false);
     return res.ok;
   },
 
   async markAllNotificationsRead(token: string): Promise<boolean> {
-    const res = await authFetch(`${API_URL}/api/notifications/read-all`, token, { method: 'POST' }, false);
+    const res = await authFetch(`${API_URL}/api/notifications/read-all`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    }, false);
     return res.ok;
   },
 
