@@ -1,5 +1,4 @@
 import { io, Socket } from 'socket.io-client';
-import { AppState, AppStateStatus } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
@@ -21,18 +20,8 @@ function attachListenersToSocket(s: Socket) {
   });
 }
 
-// Reconnect socket when app comes back to foreground
-AppState.addEventListener('change', (state: AppStateStatus) => {
-  if (state === 'active' && currentToken) {
-    if (!socket?.connected) {
-      console.log('[Socket] App foregrounded — reconnecting');
-      socketService.connect(currentToken);
-    } else if (currentSessionId) {
-      // Socket still connected — re-join session just in case
-      socket.emit('join:session', { sessionId: currentSessionId });
-    }
-  }
-});
+// NOTE: AppState reconnection is handled by AuthContext (single source of truth).
+// socket.ts only exposes connect/ensureConnected — no autonomous reconnection.
 
 export const socketService = {
   connect(token: string): Socket {
@@ -97,7 +86,15 @@ export const socketService = {
     }
   },
 
+  /** Re-join the current session room (e.g. after app foreground) */
+  rejoinCurrentSession() {
+    if (currentSessionId && socket?.connected) {
+      socket.emit('join:session', { sessionId: currentSessionId });
+    }
+  },
+
   cancelRun(sessionId: string) {
+    this.ensureConnected();
     socket?.emit('cancel:run', { sessionId });
   },
 

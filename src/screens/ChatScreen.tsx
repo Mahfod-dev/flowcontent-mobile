@@ -24,6 +24,7 @@ import { ToolActivity } from '../components/ToolActivity';
 import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { apiService } from '../services/api';
+import { socketService } from '../services/socket';
 import { MediaAttachment, ModelOption } from '../types';
 import { colors, radii, spacing } from '../theme';
 
@@ -74,24 +75,46 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     setInput((prev) => prev + (prev ? ' ' : '') + text);
   });
 
+  // Offline detection via socket state (lightweight, no extra dependency)
+  const [isOffline, setIsOffline] = useState(false);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsOffline(!socketService.isConnected());
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls } = useChat(
     sessionId ?? '',
     user?.id ?? ''
   );
 
+  // Track if user has scrolled up (reading history) — don't auto-scroll in that case
+  const isNearBottomRef = useRef(true);
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleScroll = useCallback((e: any) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    isNearBottomRef.current = distanceFromBottom < 150;
+  }, []);
+
   useEffect(() => {
     if (messages.length === 0) return;
+    if (!isNearBottomRef.current) return; // User is reading history — don't force scroll
     if (scrollTimer.current) return;
     scrollTimer.current = setTimeout(() => {
       scrollTimer.current = null;
-      flatListRef.current?.scrollToEnd({ animated: true });
+      if (isNearBottomRef.current) {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }
     }, 300);
   }, [messages]);
 
   const handleSend = () => {
     if (!input.trim() && attachments.length === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    isNearBottomRef.current = true; // Force scroll to bottom after sending
     sendMessage(input.trim(), attachments.length > 0 ? attachments : undefined, selectedModel.value);
     setInput('');
     setAttachments([]);
@@ -196,6 +219,14 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         </TouchableOpacity>
       </View>
 
+      {/* Offline banner */}
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Ionicons name="cloud-offline-outline" size={14} color={colors.warning} />
+          <Text style={styles.offlineText}>Connexion perdue — reconnexion en cours...</Text>
+        </View>
+      )}
+
       {/* Model picker modal */}
       <Modal
         visible={modelModalVisible}
@@ -241,6 +272,8 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
             onFeedback={handleFeedback}
           />
         )}
+        onScroll={handleScroll}
+        scrollEventThrottle={100}
         contentContainerStyle={styles.messageList}
         ListEmptyComponent={
           isLoadingMessages ? (
@@ -462,6 +495,11 @@ const styles = StyleSheet.create({
   },
   micBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   micBtnActive: { backgroundColor: colors.error },
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: 6, backgroundColor: colors.warningMuted,
+  },
+  offlineText: { color: colors.warning, fontSize: 12, fontWeight: '600' },
   sendBtn: { backgroundColor: colors.accent, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled: { backgroundColor: colors.tertiary },
   stopBtn: { backgroundColor: colors.error, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },

@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaFile, NangoConnection, NangoProvider, Session, SubscriptionPlan } from '../types';
 
@@ -16,14 +17,18 @@ async function safeJson(res: Response): Promise<any> {
 // Global 401 handler — triggers auto-logout from any API call
 let _onTokenExpired: (() => void) | null = null;
 
+// Active site domain — set by site switcher, sent as X-Site-Domain header
+let _activeSiteDomain: string | null = null;
+
 async function authFetch(url: string, token: string, init?: RequestInit, critical = true): Promise<Response> {
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> || {}),
+    Authorization: `Bearer ${token}`,
+  };
+  if (_activeSiteDomain) {
+    headers['X-Site-Domain'] = _activeSiteDomain;
+  }
+  const res = await fetch(url, { ...init, headers });
   if (res.status === 401 && _onTokenExpired && critical) {
     _onTokenExpired();
   }
@@ -32,6 +37,9 @@ async function authFetch(url: string, token: string, init?: RequestInit, critica
 
 export const apiService = {
   setOnTokenExpired(cb: () => void) { _onTokenExpired = cb; },
+
+  setActiveSiteDomain(domain: string | null) { _activeSiteDomain = domain; },
+  getActiveSiteDomain(): string | null { return _activeSiteDomain; },
 
   async loginWithGoogle(idToken: string) {
     const res = await fetch(`${API_URL}/api/auth/google/login`, {
@@ -167,9 +175,11 @@ export const apiService = {
       name: fileName,
       type: mimeType,
     } as any);
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+    if (_activeSiteDomain) headers['X-Site-Domain'] = _activeSiteDomain;
     const res = await fetch(`${API_URL}/api/fc-agent/files/upload`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers,
       body: formData,
     });
     if (res.status === 401 && _onTokenExpired) _onTokenExpired();
@@ -262,12 +272,6 @@ export const apiService = {
     return data?.data ?? data;
   },
 
-  async getCreditsBalance(token: string): Promise<any> {
-    const res = await authFetch(`${API_URL}/api/credits`, token, undefined, false);
-    if (!res.ok) return null;
-    const data = await safeJson(res);
-    return data?.data ?? data;
-  },
 
   async getUrgentNotifications(token: string): Promise<{ total: number; data: any[] }> {
     const res = await authFetch(`${API_URL}/api/notifications/urgent`, token, undefined, false);
@@ -481,14 +485,27 @@ export const apiService = {
   },
 
   async saveToken(token: string) {
-    await AsyncStorage.setItem('fc_token', token);
+    await SecureStore.setItemAsync('fc_token', token);
+    // Clean up legacy plaintext token from AsyncStorage (migration)
+    AsyncStorage.removeItem('fc_token').catch(() => {});
   },
 
   async getToken(): Promise<string | null> {
-    return AsyncStorage.getItem('fc_token');
+    // Try secure store first, fallback to AsyncStorage for migration
+    const secure = await SecureStore.getItemAsync('fc_token');
+    if (secure) return secure;
+    const legacy = await AsyncStorage.getItem('fc_token');
+    if (legacy) {
+      // Migrate to secure store
+      await SecureStore.setItemAsync('fc_token', legacy);
+      AsyncStorage.removeItem('fc_token').catch(() => {});
+      return legacy;
+    }
+    return null;
   },
 
   async clearToken() {
-    await AsyncStorage.removeItem('fc_token');
+    await SecureStore.deleteItemAsync('fc_token');
+    AsyncStorage.removeItem('fc_token').catch(() => {});
   },
 };

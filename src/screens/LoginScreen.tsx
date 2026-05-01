@@ -29,8 +29,12 @@ export function LoginScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
-    redirectUri: 'com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g:/oauthredirect',
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com',
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    redirectUri: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+      ? `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID.split('.')[0]}:/oauthredirect`
+      : 'com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g:/oauthredirect',
   });
 
   // Handle Google OAuth response asynchronously (code exchange happens in background)

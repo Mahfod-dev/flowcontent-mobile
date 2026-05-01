@@ -6,8 +6,10 @@ import { MediaAttachment, Message, ToolCall } from '../types';
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
 // Typewriter speed: characters per chunk & interval
-const TYPEWRITER_CHUNK = 8;
-const TYPEWRITER_MS = 10;
+const TYPEWRITER_CHUNK = 6;
+const TYPEWRITER_MS = 12;
+// Stream buffer flush interval (ms) — higher = smoother but slightly delayed
+const STREAM_FLUSH_MS = 22;
 
 export function useChat(sessionId: string, userId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -21,6 +23,10 @@ export function useChat(sessionId: string, userId: string) {
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const safetyNetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track whether we received any stream event after sending
+  const gotStreamEventRef = useRef(false);
 
   useEffect(() => {
     apiService.getToken().then((t) => { tokenRef.current = t; });
@@ -86,7 +92,7 @@ export function useChat(sessionId: string, userId: string) {
   // Reset stream timeout — 2 min (backend sends heartbeats during long tasks)
   const resetStreamTimeout = useCallback(() => {
     if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current);
-    streamTimeoutRef.current = setTimeout(() => {
+    streamTimeoutRef.current = setTimeout(async () => {
       if (streamingIdRef.current || bufferRef.current) {
         if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
         flushBuffer();
@@ -99,8 +105,35 @@ export function useChat(sessionId: string, userId: string) {
           streamingIdRef.current = null;
         }
       }
+
+      // Polling recovery: fetch actual response from backend in case stream:done was missed
+      try {
+        const token = tokenRef.current;
+        if (token && sessionId) {
+          const raw = await apiService.getSessionMessages(token, sessionId);
+          const lastBackend = [...raw].reverse().find((m: any) => m.role === 'assistant');
+          if (lastBackend?.content) {
+            setMessages((prev) => {
+              const lastLocal = [...prev].reverse().find((m) => m.role === 'assistant');
+              if (lastLocal && lastLocal.content.length >= lastBackend.content.length) return prev;
+              if (lastLocal) {
+                return prev.map((m) =>
+                  m.id === lastLocal.id ? { ...m, content: lastBackend.content, isStreaming: false } : m
+                );
+              }
+              return [...prev, {
+                id: lastBackend.id || `recovered-${Date.now()}`,
+                role: 'assistant' as const,
+                content: lastBackend.content,
+                timestamp: new Date(),
+              }];
+            });
+            setIsTyping(false);
+          }
+        }
+      } catch { /* network down — user will retry */ }
     }, 120000);
-  }, [flushBuffer]);
+  }, [flushBuffer, sessionId]);
 
   // Load existing messages
   useEffect(() => {
@@ -155,7 +188,7 @@ export function useChat(sessionId: string, userId: string) {
             flushTimerRef.current = setTimeout(() => {
               flushTimerRef.current = null;
               flushBuffer();
-            }, 16);
+            }, STREAM_FLUSH_MS);
           }
           break;
         case 'stream:thinking':
@@ -193,6 +226,11 @@ export function useChat(sessionId: string, userId: string) {
           resetStreamTimeout();
           break;
         case 'stream:heartbeat':
+          resetStreamTimeout();
+          break;
+        case 'stream:fallback':
+          gotStreamEventRef.current = true;
+          setThinkingText('Changement de modèle...');
           resetStreamTimeout();
           break;
         case 'stream:done':
@@ -253,13 +291,12 @@ export function useChat(sessionId: string, userId: string) {
       offStream();
       offTyping();
       stopTypewriter();
+      bufferRef.current = '';
       if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
       if (streamTimeoutRef.current) { clearTimeout(streamTimeoutRef.current); streamTimeoutRef.current = null; }
+      if (safetyNetRef.current) { clearTimeout(safetyNetRef.current); safetyNetRef.current = null; }
     };
   }, [sessionId, flushBuffer, resetStreamTimeout, animateFullText, stopTypewriter]);
-
-  // Track whether we received any stream event after sending
-  const gotStreamEventRef = useRef(false);
 
   // Send message via HTTP (triggers stream via WebSocket)
   const sendMessage = useCallback(
@@ -300,9 +337,11 @@ export function useChat(sessionId: string, userId: string) {
         }
 
         // Safety net: if no stream event arrives within 8s, force reconnect + re-join
-        setTimeout(() => {
-          if (!gotStreamEventRef.current && socketService.isConnected() === false) {
-            console.warn('[useChat] No stream event after 8s — forcing reconnect');
+        if (safetyNetRef.current) clearTimeout(safetyNetRef.current);
+        safetyNetRef.current = setTimeout(() => {
+          safetyNetRef.current = null;
+          if (!gotStreamEventRef.current) {
+            console.warn('[useChat] No stream event after 8s — forcing reconnect + re-join');
             socketService.ensureConnected();
             socketService.joinSession(sessionId);
           }

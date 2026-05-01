@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
+import { socketService } from '../services/socket';
 import { Credits, Session, SiteDomain } from '../types';
 import { colors, radii, spacing } from '../theme';
 
@@ -110,7 +111,14 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
   const [renameText, setRenameText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sites, setSites] = useState<SiteDomain[]>([]);
-  const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
+  const [activeSiteId, setActiveSiteIdRaw] = useState<string | null>(null);
+
+  // Sync site domain to API service header when site changes
+  const setActiveSiteId = useCallback((siteId: string | null) => {
+    setActiveSiteIdRaw(siteId);
+    const site = siteId ? sites.find((s) => s.id === siteId) : null;
+    apiService.setActiveSiteDomain(site?.domain ?? null);
+  }, [sites]);
   const [notifCount, setNotifCount] = useState(0);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 

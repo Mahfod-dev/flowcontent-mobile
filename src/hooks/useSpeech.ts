@@ -1,27 +1,35 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 
 let SpeechModule: any = null;
-let useEvent: any = null;
 
 try {
   const mod = require('expo-speech-recognition');
   SpeechModule = mod.ExpoSpeechRecognitionModule;
-  useEvent = mod.useSpeechRecognitionEvent;
 } catch {}
 
 export function useSpeech(onResult: (text: string) => void) {
   const [isListening, setIsListening] = useState(false);
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
 
-  // Register events only if module exists
-  if (useEvent) {
-    useEvent('start', () => setIsListening(true));
-    useEvent('end', () => setIsListening(false));
-    useEvent('result', (event: any) => {
+  // Register imperative event listeners (not hooks) — safe regardless of module availability
+  useEffect(() => {
+    if (!SpeechModule) return;
+
+    const startSub = SpeechModule.addListener('start', () => setIsListening(true));
+    const endSub = SpeechModule.addListener('end', () => setIsListening(false));
+    const resultSub = SpeechModule.addListener('result', (event: any) => {
       const text = event.results?.[0]?.transcript;
-      if (text) onResult(text);
+      if (text) onResultRef.current(text);
     });
-  }
+
+    return () => {
+      startSub?.remove?.();
+      endSub?.remove?.();
+      resultSub?.remove?.();
+    };
+  }, []);
 
   const toggle = useCallback(async () => {
     if (!SpeechModule) {

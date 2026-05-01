@@ -45,7 +45,7 @@ export function DashboardScreen({ onBack }: Props) {
     try {
       const [dashData, creditsData, alertsData, metricsData, tasksData] = await Promise.all([
         apiService.getDashboard(user.token),
-        apiService.getCreditsBalance(user.token),
+        apiService.getCredits(user.token),
         apiService.getUrgentNotifications(user.token),
         apiService.getDashboardMetrics(user.token),
         apiService.getDailyTasks(user.token),
@@ -67,8 +67,8 @@ export function DashboardScreen({ onBack }: Props) {
     setRefreshing(false);
   };
 
-  const creditBalance = credits?.balance ?? credits?.total ?? 0;
-  const creditTotal = credits?.total ?? credits?.monthly_free_credits ?? 1;
+  const creditBalance = credits?.total_available ?? 0;
+  const creditTotal = Math.max(credits?.total_available ?? 0, credits?.free_credits_remaining ?? 0, 1);
   const creditPlan = credits?.plan ?? 'free';
   const creditPct = creditTotal > 0 ? Math.round((creditBalance / creditTotal) * 100) : 0;
 

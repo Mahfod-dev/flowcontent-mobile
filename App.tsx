@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Keyboard,
   PanResponder,
   StyleSheet,
@@ -25,8 +24,6 @@ import { apiService } from './src/services/api';
 import { notificationService } from './src/services/notifications';
 import { Session } from './src/types';
 import { colors, DRAWER_WIDTH } from './src/theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 function AppContent() {
   const { user, isLoading, logout } = useAuth();

@@ -80,13 +80,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Reconnect socket when app comes back to foreground
+  // Reconnect socket + re-join session when app comes back to foreground
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && user?.token) {
-        if (!socketService.isConnected()) {
+        const wasDisconnected = !socketService.isConnected();
+        if (wasDisconnected) {
           socketService.connect(user.token);
         }
+        // Always re-join current session room (may have been lost during background)
+        socketService.rejoinCurrentSession();
       }
     });
     return () => subscription.remove();

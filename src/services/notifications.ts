@@ -45,7 +45,7 @@ export const notificationService = {
       }
 
       const pushToken = await Notifications.getExpoPushTokenAsync({
-        projectId: '5b21a603-9782-43d0-ab6d-dfeee96622ba',
+        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? '5b21a603-9782-43d0-ab6d-dfeee96622ba',
       });
 
       const expoPushToken = pushToken.data;

@@ -1,11 +1,62 @@
-import React, { memo, useCallback, useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { memo, useState } from 'react';
+import { Alert, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { Message } from '../types';
 import { colors, markdownTheme, radii, spacing } from '../theme';
+
+// Stable render rules — defined outside component to avoid re-renders during streaming
+const MARKDOWN_RENDER_RULES = {
+  fence: (node: any, children: any, parent: any, styles: any) => (
+    <ScrollView
+      key={node.key}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={codeBlockStyles.scrollContainer}
+      contentContainerStyle={codeBlockStyles.scrollContent}
+    >
+      <Text style={codeBlockStyles.codeText}>{node.content}</Text>
+    </ScrollView>
+  ),
+  code_block: (node: any, children: any, parent: any, styles: any) => (
+    <ScrollView
+      key={node.key}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={codeBlockStyles.scrollContainer}
+      contentContainerStyle={codeBlockStyles.scrollContent}
+    >
+      <Text style={codeBlockStyles.codeText}>{node.content}</Text>
+    </ScrollView>
+  ),
+  table: (node: any, children: any, parent: any, styles: any) => (
+    <ScrollView
+      key={node.key}
+      horizontal
+      showsHorizontalScrollIndicator
+      style={tableStyles.scrollContainer}
+    >
+      <View style={tableStyles.table}>{children}</View>
+    </ScrollView>
+  ),
+  tr: (node: any, children: any, parent: any, styles: any) => (
+    <View key={node.key} style={tableStyles.tr}>{children}</View>
+  ),
+  th: (node: any, children: any, parent: any, styles: any) => (
+    <View key={node.key} style={tableStyles.th}>
+      <Text style={tableStyles.thText}>{children}</Text>
+    </View>
+  ),
+  td: (node: any, children: any, parent: any, styles: any) => (
+    <View key={node.key} style={tableStyles.td}>
+      <Text style={tableStyles.tdText}>{children}</Text>
+    </View>
+  ),
+};
+
+const handleLinkPress = (_url: string) => true; // return true = open with Linking.openURL
 
 interface Props {
   message: Message;
@@ -46,59 +97,6 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
     );
   };
 
-  const handleLinkPress = useCallback((url: string) => {
-    return true;
-  }, []);
-
-  // Custom render rules for mobile-optimized blocks
-  const renderRules = {
-    fence: (node: any, children: any, parent: any, styles: any) => (
-      <ScrollView
-        key={node.key}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={codeBlockStyles.scrollContainer}
-        contentContainerStyle={codeBlockStyles.scrollContent}
-      >
-        <Text style={codeBlockStyles.codeText}>{node.content}</Text>
-      </ScrollView>
-    ),
-    code_block: (node: any, children: any, parent: any, styles: any) => (
-      <ScrollView
-        key={node.key}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={codeBlockStyles.scrollContainer}
-        contentContainerStyle={codeBlockStyles.scrollContent}
-      >
-        <Text style={codeBlockStyles.codeText}>{node.content}</Text>
-      </ScrollView>
-    ),
-    table: (node: any, children: any, parent: any, styles: any) => (
-      <ScrollView
-        key={node.key}
-        horizontal
-        showsHorizontalScrollIndicator
-        style={tableStyles.scrollContainer}
-      >
-        <View style={tableStyles.table}>{children}</View>
-      </ScrollView>
-    ),
-    tr: (node: any, children: any, parent: any, styles: any) => (
-      <View key={node.key} style={tableStyles.tr}>{children}</View>
-    ),
-    th: (node: any, children: any, parent: any, styles: any) => (
-      <View key={node.key} style={tableStyles.th}>
-        <Text style={tableStyles.thText}>{children}</Text>
-      </View>
-    ),
-    td: (node: any, children: any, parent: any, styles: any) => (
-      <View key={node.key} style={tableStyles.td}>
-        <Text style={tableStyles.tdText}>{children}</Text>
-      </View>
-    ),
-  };
-
   const handleFeedback = (rating: 'up' | 'down') => {
     if (feedback === rating) return;
     setFeedback(rating);
@@ -124,7 +122,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <Text style={styles.textUser}>{message.content}</Text>
           ) : (
             <View style={styles.markdownWrap}>
-              <Markdown style={markdownTheme} rules={renderRules} onLinkPress={handleLinkPress}>
+              <Markdown style={markdownTheme} rules={MARKDOWN_RENDER_RULES} onLinkPress={handleLinkPress}>
                 {message.content + (message.isStreaming ? ' \u258C' : '')}
               </Markdown>
             </View>
