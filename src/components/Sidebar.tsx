@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -141,8 +141,8 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
     });
   }, []);
 
-  const filteredSessions = (() => {
-    let list = searchQuery.trim()
+  const filteredSessions = useMemo(() => {
+    const list = searchQuery.trim()
       ? sessions.filter((s) =>
           (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
         )
@@ -155,7 +155,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
       return new Date(b.last_message_at ?? b.created_at ?? 0).getTime() -
         new Date(a.last_message_at ?? a.created_at ?? 0).getTime();
     });
-  })();
+  }, [sessions, searchQuery, pinnedIds]);
 
   const loadSessions = useCallback(async () => {
     if (!user?.token) return;

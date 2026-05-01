@@ -337,7 +337,7 @@ export function useChat(sessionId: string, userId: string) {
         }
 
         // Safety net: if no stream event arrives within 8s, force reconnect + re-join
-        if (safetyNetRef.current) clearTimeout(safetyNetRef.current);
+        if (safetyNetRef.current) { clearTimeout(safetyNetRef.current); safetyNetRef.current = null; }
         safetyNetRef.current = setTimeout(() => {
           safetyNetRef.current = null;
           if (!gotStreamEventRef.current) {

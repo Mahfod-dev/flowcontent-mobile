@@ -108,6 +108,12 @@ export const socketService = {
     return () => { typingListeners.delete(cb); };
   },
 
+  /** Listen to raw socket events (connect, disconnect, etc.) */
+  on(event: string, cb: (...args: any[]) => void): () => void {
+    socket?.on(event, cb);
+    return () => { socket?.off(event, cb); };
+  },
+
   isConnected(): boolean {
     return socket?.connected ?? false;
   },

@@ -63,8 +63,12 @@ export function NotificationsScreen({ onBack }: Props) {
 
   const handleMarkRead = async (id: string) => {
     if (!user?.token) return;
-    await apiService.markNotificationRead(user.token, id);
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+    try {
+      const ok = await apiService.markNotificationRead(user.token, id);
+      if (ok) {
+        setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+      }
+    } catch {}
   };
 
   const handleMarkAllRead = async () => {

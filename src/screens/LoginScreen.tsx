@@ -56,7 +56,7 @@ export function LoginScreen() {
     } else {
       setGoogleLoading(false);
     }
-  }, [response]);
+  }, [response, loginWithGoogleCode]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -116,6 +116,8 @@ export function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
           onFocus={() => setPasswordFocused(true)}
           onBlur={() => setPasswordFocused(false)}
         />

@@ -135,12 +135,16 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
           style: 'destructive',
           onPress: async () => {
             if (!user?.token) return;
-            const ok = await apiService.cancelSubscription(user.token);
-            if (ok) {
-              Alert.alert('Fait', 'Votre abonnement sera annule a la fin de la periode.');
-              loadData();
-            } else {
-              Alert.alert('Erreur', 'Impossible d\'annuler l\'abonnement.');
+            try {
+              const ok = await apiService.cancelSubscription(user.token);
+              if (ok) {
+                Alert.alert('Fait', 'Votre abonnement sera annule a la fin de la periode.');
+                loadData();
+              } else {
+                Alert.alert('Erreur', 'Impossible d\'annuler l\'abonnement.');
+              }
+            } catch {
+              Alert.alert('Erreur', 'Une erreur est survenue.');
             }
           },
         },

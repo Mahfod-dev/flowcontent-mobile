@@ -52,16 +52,20 @@ function AppContent() {
   // Load most recent session on login
   useEffect(() => {
     if (!user?.token) return;
+    let cancelled = false;
     (async () => {
       try {
         const sessions = await apiService.getSessions(user.token);
+        if (cancelled) return;
         if (sessions.length > 0) {
           setSessionId(sessions[0].id);
         } else {
           const result = await apiService.getOrCreateSession(user.token);
+          if (cancelled) return;
           setSessionId(result.sessionId);
         }
       } catch (err: any) {
+        if (cancelled) return;
         if (err?.message === 'TOKEN_EXPIRED') {
           Alert.alert('Session expirée', 'Veuillez vous reconnecter.', [
             { text: 'OK', onPress: logout },
@@ -70,8 +74,10 @@ function AppContent() {
         }
         try {
           const result = await apiService.getOrCreateSession(user.token);
+          if (cancelled) return;
           setSessionId(result.sessionId);
         } catch (err2: any) {
+          if (cancelled) return;
           Alert.alert('Erreur', err2?.message || 'Impossible de charger les conversations', [
             { text: 'Réessayer', onPress: () => setSessionId(null) },
             { text: 'Se reconnecter', style: 'destructive', onPress: logout },
@@ -79,6 +85,7 @@ function AppContent() {
         }
       }
     })();
+    return () => { cancelled = true; };
   }, [user?.token, logout]);
 
   const openDrawer = useCallback(() => {

@@ -41,12 +41,6 @@ export interface ToolCall {
   startedAt: number;
 }
 
-export interface StreamEvent {
-  type: 'chunk' | 'done' | 'thinking' | 'error' | 'tool_call';
-  data: string | { content?: string; tool?: string };
-  sessionId?: string;
-}
-
 export interface SiteDomain {
   id: string;
   domain: string;

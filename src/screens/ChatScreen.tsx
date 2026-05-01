@@ -75,13 +75,13 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     setInput((prev) => prev + (prev ? ' ' : '') + text);
   });
 
-  // Offline detection via socket state (lightweight, no extra dependency)
+  // Offline detection via socket events (reactive, no polling)
   const [isOffline, setIsOffline] = useState(false);
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsOffline(!socketService.isConnected());
-    }, 3000);
-    return () => clearInterval(interval);
+    const offConnect = socketService.on('connect', () => setIsOffline(false));
+    const offDisconnect = socketService.on('disconnect', () => setIsOffline(true));
+    setIsOffline(!socketService.isConnected());
+    return () => { offConnect(); offDisconnect(); };
   }, []);
 
   const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls } = useChat(
@@ -110,6 +110,13 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
       }
     }, 300);
   }, [messages]);
+
+  // Cleanup scrollTimer on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimer.current) { clearTimeout(scrollTimer.current); scrollTimer.current = null; }
+    };
+  }, []);
 
   const handleSend = () => {
     if (!input.trim() && attachments.length === 0) return;
@@ -180,7 +187,9 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const handleFeedback = useCallback(
     async (messageIndex: number, rating: 'up' | 'down') => {
       if (!user?.token || !sessionId) return;
-      await apiService.submitFeedback(user.token, sessionId, messageIndex, rating);
+      try {
+        await apiService.submitFeedback(user.token, sessionId, messageIndex, rating);
+      } catch {}
     },
     [user?.token, sessionId]
   );

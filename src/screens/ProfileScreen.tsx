@@ -125,10 +125,14 @@ export function ProfileScreen({ onBack }: Props) {
           text: 'Déconnecter',
           style: 'destructive',
           onPress: async () => {
-            const ok = await apiService.deleteNangoConnection(user.token, provider);
-            if (ok) {
-              setNangoConnections((prev) => prev.filter((c) => c.provider !== provider));
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            try {
+              const ok = await apiService.deleteNangoConnection(user.token, provider);
+              if (ok) {
+                setNangoConnections((prev) => prev.filter((c) => c.provider !== provider));
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            } catch {
+              Alert.alert('Erreur', 'Impossible de déconnecter le service.');
             }
           },
         },
