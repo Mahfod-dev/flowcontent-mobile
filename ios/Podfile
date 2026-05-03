@@ -59,13 +59,5 @@ target 'FlowContent' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-
-    # Fix Swift 6 strict concurrency errors (ExpoLinkingRegistry, NotificationCenterManager etc.)
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
-        config.build_settings['SWIFT_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
-      end
-    end
   end
 end
