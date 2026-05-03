@@ -5,6 +5,13 @@ import { MediaAttachment, Message, ToolCall } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
+/** Fetch with AbortController timeout */
+function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 30_000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 // Typewriter speed: characters per chunk & interval
 const TYPEWRITER_CHUNK = 6;
 const TYPEWRITER_MS = 12;
@@ -325,14 +332,14 @@ export function useChat(sessionId: string, userId: string) {
         const body: any = { message: text };
         if (media?.length) body.media = media;
         if (model) body.model = model;
-        const res = await fetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/messages`, {
+        const res = await fetchWithTimeout(`${API_URL}/api/fc-agent/sessions/${sessionId}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(body),
-        });
+        }, 60_000); // 60s — backend may take time to queue the message
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
           throw new Error(errBody.message || `Erreur ${res.status}`);

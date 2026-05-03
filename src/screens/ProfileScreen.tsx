@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { NangoConnection, NangoProvider } from '../types';
 import { colors, commonStyles, radii, spacing } from '../theme';
+import { safeOpenURL } from '../utils/safeOpenURL';
 
 // "google-search-console" → "Google Search Console"
 function formatProviderName(slug: string): string {
@@ -103,7 +103,7 @@ export function ProfileScreen({ onBack }: Props) {
     try {
       const result = await apiService.initiateOAuth(user.token, providerId);
       if (result?.url) {
-        await Linking.openURL(result.url);
+        await safeOpenURL(result.url);
       } else {
         Alert.alert('Erreur', 'Impossible de lancer la connexion OAuth');
       }

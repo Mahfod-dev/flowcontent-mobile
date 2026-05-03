@@ -5,6 +5,19 @@ import { Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardD
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
+const DEFAULT_TIMEOUT_MS = 30_000; // 30s default timeout for all API calls
+
+/** Fetch with AbortController timeout — prevents hanging requests */
+async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function safeJson(res: Response): Promise<any> {
   const text = await res.text();
   try {
@@ -36,7 +49,7 @@ async function tryRefreshToken(): Promise<string | null> {
       const refreshToken = await SecureStore.getItemAsync('fc_refresh_token');
       if (!refreshToken || _loggedOut) return null;
 
-      const res = await fetch(`${API_URL}/api/auth/refresh-token`, {
+      const res = await fetchWithTimeout(`${API_URL}/api/auth/refresh-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -70,7 +83,7 @@ async function authFetch(url: string, token: string, init?: RequestInit, critica
   if (_activeSiteDomain) {
     headers['X-Site-Domain'] = _activeSiteDomain;
   }
-  const res = await fetch(url, { ...init, headers });
+  const res = await fetchWithTimeout(url, { ...init, headers });
 
   // Auto-refresh on 401
   if (res.status === 401 && critical) {
@@ -84,7 +97,7 @@ async function authFetch(url: string, token: string, init?: RequestInit, critica
       if (_activeSiteDomain) {
         retryHeaders['X-Site-Domain'] = _activeSiteDomain;
       }
-      return fetch(url, { ...init, headers: retryHeaders });
+      return fetchWithTimeout(url, { ...init, headers: retryHeaders });
     }
     // Refresh failed — force logout
     if (_onTokenExpired) _onTokenExpired();
@@ -101,7 +114,7 @@ export const apiService = {
   getActiveSiteDomain(): string | null { return _activeSiteDomain; },
 
   async loginWithGoogle(idToken: string) {
-    const res = await fetch(`${API_URL}/api/auth/google/login`, {
+    const res = await fetchWithTimeout(`${API_URL}/api/auth/google/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential: idToken }),
@@ -120,7 +133,7 @@ export const apiService = {
   },
 
   async loginWithGoogleAccessToken(accessToken: string) {
-    const res = await fetch(`${API_URL}/api/auth/google/login/access-token`, {
+    const res = await fetchWithTimeout(`${API_URL}/api/auth/google/login/access-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accessToken }),
@@ -139,7 +152,7 @@ export const apiService = {
   },
 
   async login(email: string, password: string) {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
+    const res = await fetchWithTimeout(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -238,11 +251,11 @@ export const apiService = {
     const doUpload = async (t: string) => {
       const headers: Record<string, string> = { Authorization: `Bearer ${t}` };
       if (_activeSiteDomain) headers['X-Site-Domain'] = _activeSiteDomain;
-      return fetch(`${API_URL}/api/fc-agent/files/upload`, {
+      return fetchWithTimeout(`${API_URL}/api/fc-agent/files/upload`, {
         method: 'POST',
         headers,
         body: formData,
-      });
+      }, 120_000); // 2min timeout for file uploads
     };
 
     let res = await doUpload(token);
@@ -597,7 +610,7 @@ export const apiService = {
 
   async revokeRefreshToken(refreshToken: string) {
     try {
-      await fetch(`${API_URL}/api/auth/revoke-refresh-token`, {
+      await fetchWithTimeout(`${API_URL}/api/auth/revoke-refresh-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),

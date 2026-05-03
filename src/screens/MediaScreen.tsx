@@ -5,7 +5,6 @@ import {
   Animated,
   FlatList,
   Image,
-  Linking,
   PanResponder,
   RefreshControl,
   StyleSheet,
@@ -19,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { MediaFile } from '../types';
 import { colors, commonStyles, radii, spacing } from '../theme';
+import { safeOpenURL } from '../utils/safeOpenURL';
 
 interface MediaScreenProps {
   onBack: () => void;
@@ -145,13 +145,13 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
 
   const handleOpen = useCallback(async (file: MediaFile) => {
     if (file.url) {
-      Linking.openURL(file.url);
+      await safeOpenURL(file.url);
       return;
     }
     if (!user?.token) return;
     const url = await apiService.getMediaFileUrl(user.token, file.path, file.bucket);
     if (url) {
-      Linking.openURL(url);
+      await safeOpenURL(url);
     } else {
       Alert.alert('Erreur', 'Impossible d\'ouvrir le fichier.');
     }

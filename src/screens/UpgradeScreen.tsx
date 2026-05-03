@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
-  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { CreditPack, CreditTransaction, CurrentSubscription, SubscriptionPlan } from '../types';
 import { colors, commonStyles, radii, shadows, spacing } from '../theme';
+import { safeOpenURL } from '../utils/safeOpenURL';
 
 interface UpgradeScreenProps {
   onBack: () => void;
@@ -79,7 +79,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
     try {
       const result = await apiService.subscribePlan(user.token, planId);
       if (result?.url) {
-        await Linking.openURL(result.url);
+        await safeOpenURL(result.url);
       } else {
         Alert.alert('Erreur', 'Impossible de charger la page de paiement.');
       }
@@ -96,7 +96,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
     try {
       const result = await apiService.purchasePack(user.token, packId);
       if (result?.url) {
-        await Linking.openURL(result.url);
+        await safeOpenURL(result.url);
       } else {
         Alert.alert('Erreur', 'Impossible de charger la page de paiement.');
       }
@@ -113,7 +113,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
     try {
       const result = await apiService.getStripePortal(user.token);
       if (result?.url) {
-        await Linking.openURL(result.url);
+        await safeOpenURL(result.url);
       } else {
         Alert.alert('Erreur', 'Impossible d\'ouvrir le portail.');
       }
