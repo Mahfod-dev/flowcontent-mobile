@@ -34,6 +34,8 @@ export function useChat(sessionId: string, userId: string) {
 
   // Track whether we received any stream event after sending
   const gotStreamEventRef = useRef(false);
+  // Guard: prevent double-processing stream:done / stream:complete
+  const doneProcessedRef = useRef(false);
 
   useEffect(() => {
     apiService.getToken().then((t) => { tokenRef.current = t; });
@@ -178,6 +180,7 @@ export function useChat(sessionId: string, userId: string) {
       switch (event.type) {
         case 'stream:start':
           gotStreamEventRef.current = true;
+          doneProcessedRef.current = false;
           setIsTyping(true);
           setThinkingText('Flow démarre...');
           resetStreamTimeout();
@@ -242,6 +245,10 @@ export function useChat(sessionId: string, userId: string) {
           break;
         case 'stream:done':
         case 'stream:complete': {
+          // Guard: skip if already processed (backend may send both done + complete)
+          if (doneProcessedRef.current) break;
+          doneProcessedRef.current = true;
+
           if (streamTimeoutRef.current) { clearTimeout(streamTimeoutRef.current); streamTimeoutRef.current = null; }
           if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
           flushBuffer();
@@ -323,6 +330,7 @@ export function useChat(sessionId: string, userId: string) {
       ]);
       setIsTyping(true);
       gotStreamEventRef.current = false;
+      doneProcessedRef.current = false;
 
       try {
         // Always read fresh token (may have been rotated by refresh-token flow)

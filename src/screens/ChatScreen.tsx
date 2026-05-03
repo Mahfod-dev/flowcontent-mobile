@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,16 +17,19 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useSpeech } from '../hooks/useSpeech';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBubble } from '../components/MessageBubble';
 import { ToolActivity } from '../components/ToolActivity';
 import { useAuth } from '../contexts/AuthContext';
+import { useColors } from '../contexts/ThemeContext';
 import { useChat } from '../hooks/useChat';
+import { t } from '../i18n';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
 import { MediaAttachment, ModelOption } from '../types';
-import { colors, radii, spacing } from '../theme';
+import { ColorPalette, radii, spacing } from '../theme';
 
 const MODEL_OPTIONS: ModelOption[] = [
   { label: 'Auto', value: null, emoji: 'auto' },
@@ -42,6 +45,8 @@ interface ChatScreenProps {
 
 export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   const { user } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
@@ -132,9 +137,9 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   };
 
   const handlePickFile = () => {
-    Alert.alert('Ajouter un fichier', '', [
+    Alert.alert(t('addFile'), '', [
       {
-        text: 'Photo / Galerie',
+        text: t('photoGallery'),
         onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
@@ -146,7 +151,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         },
       },
       {
-        text: 'Document (PDF, DOCX...)',
+        text: t('documentPdf'),
         onPress: async () => {
           const result = await DocumentPicker.getDocumentAsync({
             type: [
@@ -164,7 +169,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
           await uploadFile(asset.uri, asset.name, asset.mimeType || 'application/octet-stream');
         },
       },
-      { text: 'Annuler', style: 'cancel' },
+      { text: t('cancel'), style: 'cancel' },
     ]);
   };
 
@@ -172,14 +177,26 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     if (!user?.token) return;
     setUploading(true);
     try {
-      const data = await apiService.uploadFile(user.token, uri, name, mimeType);
+      // Compress images before upload (max 1200px, 70% quality)
+      let finalUri = uri;
+      if (mimeType.startsWith('image/') && !mimeType.includes('svg')) {
+        try {
+          const result = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1200 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
+          );
+          finalUri = result.uri;
+        } catch {}
+      }
+      const data = await apiService.uploadFile(user.token, finalUri, name, mimeType);
       if (!data?.attachment) {
         throw new Error('Réponse invalide du serveur');
       }
       setAttachments((prev) => [...prev, data.attachment]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      Alert.alert('Erreur upload', err.message || 'Erreur inconnue');
+      Alert.alert(t('uploadError'), err.message || 'Erreur inconnue');
     } finally {
       setUploading(false);
     }
@@ -203,7 +220,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     return (
       <SafeAreaView style={styles.loading}>
         <ActivityIndicator color={colors.accent} size="large" />
-        <Text style={styles.loadingText}>Connexion à Flow...</Text>
+        <Text style={styles.loadingText}>{t('connectingToFlow')}</Text>
       </SafeAreaView>
     );
   }
@@ -216,7 +233,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         keyboardVerticalOffset={0}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onOpenDrawer} style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={onOpenDrawer} style={styles.headerBtn} activeOpacity={0.7} accessibilityLabel={t('openMenu')} accessibilityRole="button">
           <Ionicons name="menu-outline" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -237,7 +254,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
       {isOffline && (
         <View style={styles.offlineBanner}>
           <Ionicons name="cloud-offline-outline" size={14} color={colors.warning} />
-          <Text style={styles.offlineText}>Connexion perdue — reconnexion en cours...</Text>
+          <Text style={styles.offlineText}>{t('connectionLost')}</Text>
         </View>
       )}
 
@@ -254,7 +271,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
           onPress={() => setModelModalVisible(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choix du mod{'\u00E8'}le</Text>
+            <Text style={styles.modalTitle}>{t('modelChoice')}</Text>
             {MODEL_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.label}
@@ -289,6 +306,10 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         onScroll={handleScroll}
         scrollEventThrottle={100}
         contentContainerStyle={styles.messageList}
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={11}
+        removeClippedSubviews={Platform.OS === 'android'}
         ListEmptyComponent={
           isLoadingMessages ? (
             <View style={styles.emptyState}>
@@ -299,11 +320,11 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
               <View style={styles.emptyLogoWrap}>
                 <Ionicons name="flash" size={32} color={colors.white} />
               </View>
-              <Text style={styles.emptyTitle}>Votre équipe marketing IA</Text>
-              <Text style={styles.emptyTagline}>SEO, contenu, prospection, e-commerce, social{'\n'}95+ outils. Une seule conversation.</Text>
+              <Text style={styles.emptyTitle}>{t('yourAiTeam')}</Text>
+              <Text style={styles.emptyTagline}>{t('aiTagline')}</Text>
 
               <View style={styles.suggestionsWrap}>
-                <Text style={styles.suggestionsLabel}>ESSAYEZ</Text>
+                <Text style={styles.suggestionsLabel}>{t('tryIt')}</Text>
                 <View style={styles.suggestionsGrid}>
                   <TouchableOpacity style={styles.suggestionChip} onPress={() => { setInput('Audite mon site et donne-moi les quick wins SEO'); }} activeOpacity={0.7}>
                     <Ionicons name="pulse-outline" size={16} color={colors.accent} />
@@ -344,7 +365,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         <View style={styles.thinkingBar}>
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={styles.thinkingText} numberOfLines={1}>
-            {thinkingText || 'Flow réfléchit...'}
+            {thinkingText || t('thinking')}
           </Text>
         </View>
       )}
@@ -367,7 +388,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
 
       {/* Input */}
       <View style={styles.inputRow}>
-        <TouchableOpacity style={styles.attachBtn} onPress={handlePickFile} disabled={uploading} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.attachBtn} onPress={handlePickFile} disabled={uploading} activeOpacity={0.7} accessibilityLabel={t('attachFile')} accessibilityRole="button">
           {uploading ? (
             <ActivityIndicator size="small" color={colors.accent} />
           ) : (
@@ -376,7 +397,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         </TouchableOpacity>
         <TextInput
           style={[styles.input, inputFocused && styles.inputFocused]}
-          placeholder="Écrivez un message..."
+          placeholder={t('writeMessage')}
           placeholderTextColor={colors.textTertiary}
           value={input}
           onChangeText={setInput}
@@ -385,16 +406,20 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
           onSubmitEditing={handleSend}
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
+          accessibilityLabel={t('message')}
+          accessibilityHint={t('writeMessageHint')}
         />
         <TouchableOpacity
           style={[styles.micBtn, isListening && styles.micBtnActive]}
           onPress={handleMic}
           activeOpacity={0.7}
+          accessibilityLabel={isListening ? t('stopVoice') : t('voiceInput')}
+          accessibilityRole="button"
         >
           <Ionicons name={isListening ? 'stop' : 'mic-outline'} size={18} color={isListening ? colors.white : colors.textSecondary} />
         </TouchableOpacity>
         {isTyping ? (
-          <TouchableOpacity style={styles.stopBtn} onPress={cancelRun} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.stopBtn} onPress={cancelRun} activeOpacity={0.7} accessibilityLabel={t('stopGeneration')} accessibilityRole="button">
             <Ionicons name="stop" size={16} color={colors.white} />
           </TouchableOpacity>
         ) : (
@@ -403,6 +428,8 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
             onPress={handleSend}
             disabled={!input.trim() && attachments.length === 0}
             activeOpacity={0.7}
+            accessibilityLabel={t('sendMessage')}
+            accessibilityRole="button"
           >
             <Ionicons name="arrow-up" size={20} color={colors.white} />
           </TouchableOpacity>
@@ -413,7 +440,7 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary },
   flex: { flex: 1 },
   loading: { flex: 1, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', gap: spacing.md },

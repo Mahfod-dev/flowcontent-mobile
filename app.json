@@ -20,13 +20,50 @@
         "NSMicrophoneUsageDescription": "FlowContent utilise le micro pour la saisie vocale.",
         "NSSpeechRecognitionUsageDescription": "FlowContent utilise la reconnaissance vocale pour transcrire vos messages.",
         "NSPhotoLibraryUsageDescription": "FlowContent accède à vos photos pour les joindre aux messages.",
+        "NSPhotoLibraryAddUsageDescription": "FlowContent enregistre des images générées dans votre galerie.",
+        "NSFaceIDUsageDescription": "FlowContent utilise Face ID pour protéger l'accès à votre compte.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g"
+              "com.googleusercontent.apps.124777433323-ckpmkadp96nvc78q4vh3grr08fte0hfr"
             ]
           }
         ]
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1"
+            ]
+          }
+        ],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeEmailAddress",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeName",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          }
+        ],
+        "NSPrivacyTracking": false
       },
       "runtimeVersion": "1.0.0"
     },
@@ -62,7 +99,10 @@
           "icon": "./assets/icon.png",
           "color": "#6366F1"
         }
-      ]
+      ],
+      "@sentry/react-native",
+      "expo-image",
+      "expo-localization"
     ],
     "updates": {
       "url": "https://u.expo.dev/5b21a603-9782-43d0-ab6d-dfeee96622ba"

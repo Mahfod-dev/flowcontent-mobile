@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,16 +12,13 @@ import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useColors } from '../contexts/ThemeContext';
+import { t } from '../i18n';
 import { apiService } from '../services/api';
 import { AppNotification } from '../types';
-import { colors, commonStyles, notificationMarkdownTheme, radii, spacing } from '../theme';
-
-const PRIORITY_COLORS: Record<string, string> = {
-  urgent: colors.error,
-  high: colors.warning,
-  medium: colors.accent,
-  low: colors.textTertiary,
-};
+import { ColorPalette } from '../theme';
+import { commonStyles, notificationMarkdownTheme, radii, spacing } from '../theme';
+import { NotificationsSkeleton } from '../components/Skeleton';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -40,6 +37,8 @@ interface Props {
 
 export function NotificationsScreen({ onBack }: Props) {
   const { user } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,6 +80,13 @@ export function NotificationsScreen({ onBack }: Props) {
     } catch {}
   };
 
+  const PRIORITY_COLORS: Record<string, string> = {
+    urgent: colors.error,
+    high: colors.warning,
+    medium: colors.accent,
+    low: colors.textTertiary,
+  };
+
   const renderNotification = ({ item }: { item: AppNotification }) => (
     <TouchableOpacity
       style={[styles.card, !item.is_read && styles.cardUnread]}
@@ -108,14 +114,14 @@ export function NotificationsScreen({ onBack }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Notifications</Text>
+        <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('notifications')}</Text>
         {unreadCount > 0 ? (
           <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.7}>
-            <Text style={styles.markAllRead}>Tout lire</Text>
+            <Text style={styles.markAllRead}>{t('markAllRead')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 36 }} />
@@ -123,22 +129,23 @@ export function NotificationsScreen({ onBack }: Props) {
       </View>
 
       {loading ? (
-        <View style={commonStyles.loadingContainer}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <NotificationsSkeleton />
       ) : (
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
           renderItem={renderNotification}
           contentContainerStyle={styles.list}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={9}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>Aucune notification</Text>
+              <Text style={styles.emptyText}>{t('noNotifications')}</Text>
             </View>
           }
         />
@@ -147,11 +154,8 @@ export function NotificationsScreen({ onBack }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary },
-  header: {
-    ...commonStyles.header,
-  },
   markAllRead: { color: colors.accent, fontSize: 13, fontWeight: '600' },
   list: { padding: spacing.md, gap: spacing.sm },
   card: {

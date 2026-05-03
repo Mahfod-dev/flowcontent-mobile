@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -14,12 +16,21 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../contexts/AuthContext';
-import { colors, radii, shadows, spacing } from '../theme';
+import { useColors } from '../contexts/ThemeContext';
+import { t } from '../i18n';
+import { apiService } from '../services/api';
+import { ColorPalette, radii, shadows, spacing } from '../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export function LoginScreen() {
+interface Props {
+  onSwitchToSignup?: () => void;
+}
+
+export function LoginScreen({ onSwitchToSignup }: Props) {
   const { login, loginWithGoogleCode } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,6 +38,9 @@ export function LoginScreen() {
   const [error, setError] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -60,7 +74,7 @@ export function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Renseignez votre email et mot de passe');
+      setError(t('fillEmailPassword'));
       return;
     }
     setLoading(true);
@@ -71,6 +85,21 @@ export function LoginScreen() {
       setError(err.message || 'Connexion échouée');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    try {
+      await apiService.forgotPassword(forgotEmail.trim().toLowerCase());
+      setForgotModalVisible(false);
+      setForgotEmail('');
+      Alert.alert(t('emailSent'), t('forgotSubtitle'));
+    } catch (err: any) {
+      Alert.alert('Erreur', err.message || 'Impossible d\'envoyer l\'email');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -96,11 +125,11 @@ export function LoginScreen() {
           <Ionicons name="flash" size={28} color={colors.accent} />
           <Text style={styles.logo}> FlowContent</Text>
         </View>
-        <Text style={styles.subtitle}>Connectez-vous à votre assistant IA</Text>
+        <Text style={styles.subtitle}>{t('loginSubtitle')}</Text>
 
         <TextInput
           style={[styles.input, emailFocused && styles.inputFocused]}
-          placeholder="Email"
+          placeholder={t('email')}
           placeholderTextColor={colors.textTertiary}
           value={email}
           onChangeText={setEmail}
@@ -108,10 +137,13 @@ export function LoginScreen() {
           keyboardType="email-address"
           onFocus={() => setEmailFocused(true)}
           onBlur={() => setEmailFocused(false)}
+          accessibilityLabel={t('email')}
+          textContentType="emailAddress"
+          autoComplete="email"
         />
         <TextInput
           style={[styles.input, passwordFocused && styles.inputFocused]}
-          placeholder="Mot de passe"
+          placeholder={t('password')}
           placeholderTextColor={colors.textTertiary}
           value={password}
           onChangeText={setPassword}
@@ -120,21 +152,28 @@ export function LoginScreen() {
           onSubmitEditing={handleLogin}
           onFocus={() => setPasswordFocused(true)}
           onBlur={() => setPasswordFocused(false)}
+          accessibilityLabel={t('password')}
+          textContentType="password"
+          autoComplete="password"
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading || googleLoading} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => { setForgotEmail(email); setForgotModalVisible(true); }} activeOpacity={0.7}>
+          <Text style={styles.forgotText}>{t('forgotPassword')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading || googleLoading} activeOpacity={0.7} accessibilityLabel={t('login')} accessibilityRole="button">
           {loading ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={styles.buttonText}>Se connecter</Text>
+            <Text style={styles.buttonText}>{t('login')}</Text>
           )}
         </TouchableOpacity>
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>ou</Text>
+          <Text style={styles.dividerText}>{t('or')}</Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -149,17 +188,61 @@ export function LoginScreen() {
           ) : (
             <>
               <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.googleText}>Continuer avec Google</Text>
+              <Text style={styles.googleText}>{t('continueWithGoogle')}</Text>
             </>
           )}
         </TouchableOpacity>
+
+        {onSwitchToSignup && (
+          <TouchableOpacity onPress={onSwitchToSignup} activeOpacity={0.7}>
+            <Text style={styles.switchText}>
+              {t('noAccount')}{' '}
+              <Text style={styles.switchLink}>{t('signup')}</Text>
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Forgot Password Modal */}
+      <Modal visible={forgotModalVisible} transparent animationType="fade" onRequestClose={() => setForgotModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setForgotModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('forgotTitle')}</Text>
+            <Text style={styles.modalSubtitle}>{t('forgotSubtitle')}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t('email')}
+              placeholderTextColor={colors.textTertiary}
+              value={forgotEmail}
+              onChangeText={setForgotEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[styles.button, !forgotEmail.trim() && styles.buttonDisabled]}
+              onPress={handleForgotPassword}
+              disabled={!forgotEmail.trim() || forgotLoading}
+              activeOpacity={0.7}
+            >
+              {forgotLoading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.buttonText}>{t('sendLink')}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setForgotModalVisible(false)} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>{t('cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary },
   flex: { flex: 1, justifyContent: 'center', padding: spacing.xxl },
   card: {
@@ -230,5 +313,54 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontSize: 15,
     fontWeight: '600',
+  },
+  forgotText: {
+    color: colors.accent,
+    fontSize: 13,
+    textAlign: 'right',
+    marginTop: -spacing.sm,
+  },
+  switchText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  switchLink: {
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.secondary,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    width: 300,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: colors.tertiary,
+  },
+  cancelText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

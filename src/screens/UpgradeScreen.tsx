@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,9 +13,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
+import { useColors } from '../contexts/ThemeContext';
+import { t } from '../i18n';
 import { apiService } from '../services/api';
 import { CreditPack, CreditTransaction, CurrentSubscription, SubscriptionPlan } from '../types';
-import { colors, commonStyles, radii, shadows, spacing } from '../theme';
+import { ColorPalette, commonStyles, radii, shadows, spacing } from '../theme';
 import { safeOpenURL } from '../utils/safeOpenURL';
 
 interface UpgradeScreenProps {
@@ -23,6 +25,8 @@ interface UpgradeScreenProps {
 }
 
 export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
@@ -81,10 +85,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
       if (result?.url) {
         await safeOpenURL(result.url);
       } else {
-        Alert.alert('Erreur', 'Impossible de charger la page de paiement.');
+        Alert.alert(t('error'), t('paymentPageError'));
       }
     } catch (e) {
-      Alert.alert('Erreur', 'Une erreur est survenue.');
+      Alert.alert(t('error'), t('genericError'));
     } finally {
       setActionLoading(null);
     }
@@ -98,10 +102,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
       if (result?.url) {
         await safeOpenURL(result.url);
       } else {
-        Alert.alert('Erreur', 'Impossible de charger la page de paiement.');
+        Alert.alert(t('error'), t('paymentPageError'));
       }
     } catch (e) {
-      Alert.alert('Erreur', 'Une erreur est survenue.');
+      Alert.alert(t('error'), t('genericError'));
     } finally {
       setActionLoading(null);
     }
@@ -115,10 +119,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
       if (result?.url) {
         await safeOpenURL(result.url);
       } else {
-        Alert.alert('Erreur', 'Impossible d\'ouvrir le portail.');
+        Alert.alert(t('error'), t('portalError'));
       }
     } catch (e) {
-      Alert.alert('Erreur', 'Une erreur est survenue.');
+      Alert.alert(t('error'), t('genericError'));
     } finally {
       setActionLoading(null);
     }
@@ -126,25 +130,25 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
 
   const handleCancel = useCallback(() => {
     Alert.alert(
-      'Annuler l\'abonnement',
-      'Votre abonnement restera actif jusqu\'a la fin de la periode en cours.',
+      t('cancelSubscription'),
+      t('cancelSubscriptionMsg'),
       [
-        { text: 'Non', style: 'cancel' },
+        { text: t('no'), style: 'cancel' },
         {
-          text: 'Oui, annuler',
+          text: t('yesCancel'),
           style: 'destructive',
           onPress: async () => {
             if (!user?.token) return;
             try {
               const ok = await apiService.cancelSubscription(user.token);
               if (ok) {
-                Alert.alert('Fait', 'Votre abonnement sera annule a la fin de la periode.');
+                Alert.alert(t('done'), t('subscriptionCancelledMsg'));
                 loadData();
               } else {
-                Alert.alert('Erreur', 'Impossible d\'annuler l\'abonnement.');
+                Alert.alert(t('error'), t('cancelSubscription'));
               }
             } catch {
-              Alert.alert('Erreur', 'Une erreur est survenue.');
+              Alert.alert(t('error'), t('genericError'));
             }
           },
         },
@@ -161,11 +165,11 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
+        <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={commonStyles.headerTitle}>Abonnement & Credits</Text>
+          <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('subscriptionCredits')}</Text>
           <View style={{ width: 36 }} />
         </View>
         <View style={commonStyles.loadingContainer}>
@@ -178,11 +182,11 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Abonnement & Credits</Text>
+        <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('subscriptionCredits')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -195,25 +199,25 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
       >
         {/* Current Subscription */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MON ABONNEMENT</Text>
+          <Text style={styles.sectionTitle}>{t('mySubscription')}</Text>
           <View style={styles.card}>
             <View style={styles.planRow}>
-              <Text style={styles.planName}>{subscription?.plan ?? 'Gratuit'}</Text>
+              <Text style={styles.planName}>{subscription?.plan ?? t('free')}</Text>
               <View style={[styles.statusBadge, subscription?.status === 'active' ? styles.statusActive : styles.statusInactive]}>
                 <Text style={[styles.statusText, subscription?.status === 'active' ? styles.statusTextActive : styles.statusTextInactive]}>
-                  {subscription?.cancel_at_period_end ? 'Annulation prevue' : subscription?.status === 'active' ? 'Actif' : subscription?.status ?? 'Inactif'}
+                  {subscription?.cancel_at_period_end ? t('cancellationPlanned') : subscription?.status === 'active' ? t('active') : subscription?.status ?? t('inactive')}
                 </Text>
               </View>
             </View>
             <Text style={styles.creditsText}>
-              {subscription?.credits_remaining ?? 0} / {subscription?.credits_total ?? 0} credits
+              {subscription?.credits_remaining ?? 0} / {subscription?.credits_total ?? 0} {t('credits')}
             </Text>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
             </View>
             {subscription?.current_period_end && (
               <Text style={styles.renewDate}>
-                Renouvellement : {new Date(subscription.current_period_end).toLocaleDateString('fr-FR')}
+                {t('renewal')} : {new Date(subscription.current_period_end).toLocaleDateString('fr-FR')}
               </Text>
             )}
           </View>
@@ -222,7 +226,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         {/* Subscription Plans */}
         {plans.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>CHANGER DE PLAN</Text>
+            <Text style={styles.sectionTitle}>{t('changePlan')}</Text>
             {plans.map((plan) => {
               const isCurrent = subscription?.plan?.toLowerCase() === plan.name?.toLowerCase();
               return (
@@ -244,7 +248,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                   )}
                   {isCurrent ? (
                     <View style={styles.currentPlanBadge}>
-                      <Text style={styles.currentPlanText}>Plan actuel</Text>
+                      <Text style={styles.currentPlanText}>{t('currentPlan')}</Text>
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -256,7 +260,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                       {actionLoading === plan.id ? (
                         <ActivityIndicator color={colors.white} size="small" />
                       ) : (
-                        <Text style={styles.choosePlanText}>Choisir</Text>
+                        <Text style={styles.choosePlanText}>{t('choose')}</Text>
                       )}
                     </TouchableOpacity>
                   )}
@@ -269,12 +273,12 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         {/* Credit Packs */}
         {packs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ACHETER DES CREDITS</Text>
+            <Text style={styles.sectionTitle}>{t('buyCredits')}</Text>
             <View style={styles.packsGrid}>
               {packs.map((pack) => (
                 <View key={pack.id} style={styles.packCard}>
                   <Text style={styles.packCredits}>{pack.credits}</Text>
-                  <Text style={styles.packCreditsLabel}>credits</Text>
+                  <Text style={styles.packCreditsLabel}>{t('credits')}</Text>
                   <Text style={styles.packPrice}>{pack.price}€</Text>
                   <TouchableOpacity
                     style={styles.packBuyBtn}
@@ -285,7 +289,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
                     {actionLoading === pack.id ? (
                       <ActivityIndicator color={colors.white} size="small" />
                     ) : (
-                      <Text style={styles.packBuyText}>Acheter</Text>
+                      <Text style={styles.packBuyText}>{t('buy')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -297,7 +301,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         {/* Transaction History */}
         {history.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>HISTORIQUE</Text>
+            <Text style={styles.sectionTitle}>{t('transactionHistory')}</Text>
             {history.slice(0, 20).map((tx) => (
               <View key={tx.id} style={styles.historyRow}>
                 <View style={{ flex: 1 }}>
@@ -329,13 +333,13 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
             {actionLoading === 'portal' ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Text style={styles.portalBtnText}>Gerer mon abonnement (Stripe)</Text>
+              <Text style={styles.portalBtnText}>{t('manageSubscription')}</Text>
             )}
           </TouchableOpacity>
 
           {subscription?.status === 'active' && !subscription?.cancel_at_period_end && (
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.7}>
-              <Text style={styles.cancelBtnText}>Annuler l'abonnement</Text>
+              <Text style={styles.cancelBtnText}>{t('cancelSubscription')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -344,13 +348,10 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
-  },
-  header: {
-    ...commonStyles.header,
   },
   scroll: {
     flex: 1,

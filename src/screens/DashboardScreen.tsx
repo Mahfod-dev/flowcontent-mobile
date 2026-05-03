@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -11,9 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useColors } from '../contexts/ThemeContext';
+import { t } from '../i18n';
 import { apiService } from '../services/api';
 import { DashboardData } from '../types';
-import { colors, commonStyles, radii, shadows, spacing } from '../theme';
+import { ColorPalette } from '../theme';
+import { commonStyles, radii, shadows, spacing } from '../theme';
+import { DashboardSkeleton } from '../components/Skeleton';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -32,6 +36,8 @@ interface Props {
 
 export function DashboardScreen({ onBack }: Props) {
   const { user } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
@@ -74,20 +80,18 @@ export function DashboardScreen({ onBack }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Dashboard</Text>
+        <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('dashboard')}</Text>
         <TouchableOpacity onPress={handleRefresh} style={commonStyles.backBtn} activeOpacity={0.7}>
           <Ionicons name="refresh-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <View style={commonStyles.loadingContainer}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <DashboardSkeleton />
       ) : (
         <ScrollView
           contentContainerStyle={styles.content}
@@ -98,7 +102,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Credits & Alerts row */}
           <View style={styles.creditsAlertRow}>
             <View style={styles.creditsCard}>
-              <Text style={styles.miniTitle}>CRÉDITS · {creditPlan.toUpperCase()}</Text>
+              <Text style={styles.miniTitle}>{t('credits')} · {creditPlan.toUpperCase()}</Text>
               <View style={styles.creditsValueRow}>
                 <Ionicons name="wallet-outline" size={16} color={colors.accent} />
                 <Text style={styles.creditsBig}>{creditBalance.toLocaleString()}</Text>
@@ -113,7 +117,7 @@ export function DashboardScreen({ onBack }: Props) {
               </View>
             </View>
             <View style={styles.alertsCard}>
-              <Text style={styles.miniTitle}>ALERTES</Text>
+              <Text style={styles.miniTitle}>{t('alerts')}</Text>
               {urgentAlerts.total > 0 ? (
                 <View style={styles.alertBadge}>
                   <Ionicons name="warning-outline" size={14} color={colors.error} />
@@ -122,7 +126,7 @@ export function DashboardScreen({ onBack }: Props) {
               ) : (
                 <View style={styles.allClear}>
                   <View style={styles.greenDot} />
-                  <Text style={styles.allClearText}>Tout est OK</Text>
+                  <Text style={styles.allClearText}>{t('allClear')}</Text>
                 </View>
               )}
             </View>
@@ -131,35 +135,35 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Stats grid - 6 cards like web */}
           {data?.stats && (
             <>
-              <Text style={styles.sectionTitle}>STATISTIQUES</Text>
+              <Text style={styles.sectionTitle}>{t('statistics')}</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{data.stats.articlesGenerated}</Text>
-                  <Text style={styles.statLabel}>Articles</Text>
+                  <Text style={styles.statLabel}>{t('articles')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{data.stats.imagesCreated}</Text>
-                  <Text style={styles.statLabel}>Images</Text>
+                  <Text style={styles.statLabel}>{t('images')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{data.stats.videosGenerated ?? 0}</Text>
-                  <Text style={styles.statLabel}>Vidéos</Text>
+                  <Text style={styles.statLabel}>{t('videos')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{data.stats.audiosGenerated ?? 0}</Text>
-                  <Text style={styles.statLabel}>Audios</Text>
+                  <Text style={styles.statLabel}>{t('audios')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>
                     {data.stats.successRate > 0 ? `${Math.round(data.stats.successRate)}%` : '—'}
                   </Text>
-                  <Text style={styles.statLabel}>Succès</Text>
+                  <Text style={styles.statLabel}>{t('success')}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>
                     {data.stats.averageTime > 0 ? `${data.stats.averageTime} min` : '—'}
                   </Text>
-                  <Text style={styles.statLabel}>Temps moy.</Text>
+                  <Text style={styles.statLabel}>{t('avgTime')}</Text>
                 </View>
               </View>
             </>
@@ -168,23 +172,23 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Generation Metrics */}
           {metrics && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>MÉTRIQUES DE GÉNÉRATION</Text>
+              <Text style={styles.sectionTitle}>{t('generationMetrics')}</Text>
               <View style={styles.metricsCard}>
                 <View style={styles.metricRow}>
-                  <Text style={styles.metricLabel}>Temps moyen / article</Text>
+                  <Text style={styles.metricLabel}>{t('avgTimePerArticle')}</Text>
                   <Text style={styles.metricValue}>
                     {metrics.averageTimePerArticle > 0 ? `${metrics.averageTimePerArticle} min` : '—'}
                   </Text>
                 </View>
                 <View style={styles.metricRow}>
-                  <Text style={styles.metricLabel}>Taux de succès global</Text>
+                  <Text style={styles.metricLabel}>{t('globalSuccessRate')}</Text>
                   <Text style={styles.metricValue}>
                     {metrics.generationSuccessRate > 0 ? `${metrics.generationSuccessRate}%` : '—'}
                   </Text>
                 </View>
                 {metrics.peakGenerationTimes?.length > 0 && (
                   <View style={[styles.metricRow, { borderBottomWidth: 0 }]}>
-                    <Text style={styles.metricLabel}>Pics de génération</Text>
+                    <Text style={styles.metricLabel}>{t('generationPeaks')}</Text>
                     <Text style={styles.metricValue}>
                       {metrics.peakGenerationTimes.map((p: any) => `${p.hour}h`).join(', ')}
                     </Text>
@@ -197,7 +201,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Daily Tasks */}
           {dailyTasks && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>TÂCHES DU JOUR</Text>
+              <Text style={styles.sectionTitle}>{t('dailyTasks')}</Text>
               {(() => {
                 const allTasks = dailyTasks.top_tasks ?? dailyTasks.all_tasks ?? [];
                 const activeTasks = allTasks.filter((t: any) => t.status === 'pending' || t.status === 'in_progress');
@@ -207,7 +211,7 @@ export function DashboardScreen({ onBack }: Props) {
                 if (totalCount === 0 && activeTasks.length === 0) {
                   return (
                     <View style={styles.emptySmall}>
-                      <Text style={styles.emptySmallText}>Aucune tâche pour aujourd'hui</Text>
+                      <Text style={styles.emptySmallText}>{t('noTasks')}</Text>
                     </View>
                   );
                 }
@@ -216,7 +220,7 @@ export function DashboardScreen({ onBack }: Props) {
                   <View style={styles.tasksCard}>
                     {totalCount > 0 && (
                       <View style={styles.tasksHeader}>
-                        <Text style={styles.tasksProgress}>{completedCount}/{totalCount} complétées</Text>
+                        <Text style={styles.tasksProgress}>{completedCount}/{totalCount} {t('completed')}</Text>
                         <View style={styles.progressBar}>
                           <View style={[styles.progressFill, styles.progressAccent, { width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }]} />
                         </View>
@@ -245,7 +249,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Recent activity */}
           {data?.recentActivity && data.recentActivity.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>ACTIVITÉ RÉCENTE</Text>
+              <Text style={styles.sectionTitle}>{t('recentActivity')}</Text>
               {data.recentActivity.slice(0, 8).map((activity) => (
                 <View key={activity.id} style={styles.activityRow}>
                   <View style={styles.activityInfo}>
@@ -274,7 +278,7 @@ export function DashboardScreen({ onBack }: Props) {
           {/* Domain stats */}
           {data?.domainStats && data.domainStats.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>STATS PAR DOMAINE</Text>
+              <Text style={styles.sectionTitle}>{t('domainStats')}</Text>
               {data.domainStats.map((ds) => (
                 <View key={ds.domain} style={styles.domainCard}>
                   <Text style={styles.domainName} numberOfLines={1}>{ds.domain}</Text>
@@ -295,7 +299,7 @@ export function DashboardScreen({ onBack }: Props) {
           {!data && !credits && !dailyTasks && (
             <View style={styles.empty}>
               <Ionicons name="bar-chart-outline" size={48} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>Aucune donnée disponible</Text>
+              <Text style={styles.emptyText}>{t('noData')}</Text>
             </View>
           )}
         </ScrollView>
@@ -304,11 +308,8 @@ export function DashboardScreen({ onBack }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary },
-  header: {
-    ...commonStyles.header,
-  },
   content: { padding: spacing.lg, paddingBottom: 40 },
 
   // Credits & Alerts

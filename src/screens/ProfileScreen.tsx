@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,8 +16,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
+import { useBiometric } from '../hooks/useBiometric';
+import { useColors } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { t } from '../i18n';
+import { ColorPalette } from '../theme';
 import { NangoConnection, NangoProvider } from '../types';
-import { colors, commonStyles, radii, spacing } from '../theme';
+import { commonStyles, radii, spacing } from '../theme';
 import { safeOpenURL } from '../utils/safeOpenURL';
 
 // "google-search-console" → "Google Search Console"
@@ -34,6 +39,10 @@ interface Props {
 
 export function ProfileScreen({ onBack }: Props) {
   const { user } = useAuth();
+  const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, biometricType, toggleEnabled: toggleBiometric } = useBiometric();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -86,12 +95,12 @@ export function ProfileScreen({ onBack }: Props) {
       });
       if (ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Profil mis à jour');
+        Alert.alert(t('profileUpdated'));
       } else {
-        Alert.alert('Erreur', 'Impossible de sauvegarder');
+        Alert.alert(t('error'), t('cannotSave'));
       }
     } catch (err: any) {
-      Alert.alert('Erreur', err.message);
+      Alert.alert(t('error'), err.message);
     } finally {
       setSaving(false);
     }
@@ -105,10 +114,10 @@ export function ProfileScreen({ onBack }: Props) {
       if (result?.url) {
         await safeOpenURL(result.url);
       } else {
-        Alert.alert('Erreur', 'Impossible de lancer la connexion OAuth');
+        Alert.alert(t('error'), 'Impossible de lancer la connexion OAuth');
       }
     } catch (err: any) {
-      Alert.alert('Erreur', err.message);
+      Alert.alert(t('error'), err.message);
     } finally {
       setConnectingProvider(null);
     }
@@ -117,12 +126,12 @@ export function ProfileScreen({ onBack }: Props) {
   const handleDisconnect = async (provider: string) => {
     if (!user?.token) return;
     Alert.alert(
-      'Déconnecter',
-      `Déconnecter ${provider} ?`,
+      t('disconnect'),
+      `${t('disconnect')} ${provider} ?`,
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Déconnecter',
+          text: t('disconnect'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -132,7 +141,7 @@ export function ProfileScreen({ onBack }: Props) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               }
             } catch {
-              Alert.alert('Erreur', 'Impossible de déconnecter le service.');
+              Alert.alert(t('error'), 'Impossible de déconnecter le service.');
             }
           },
         },
@@ -143,11 +152,11 @@ export function ProfileScreen({ onBack }: Props) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={commonStyles.headerTitle}>Profil</Text>
+          <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('profile')}</Text>
           <View style={{ width: 36 }} />
         </View>
         <View style={commonStyles.loadingContainer}>
@@ -165,14 +174,14 @@ export function ProfileScreen({ onBack }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Profil</Text>
+        <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('profile')}</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.7}>
           <Text style={[styles.saveBtn, saving && { opacity: 0.5 }]}>
-            {saving ? '...' : 'Sauver'}
+            {saving ? '...' : t('save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -190,34 +199,34 @@ export function ProfileScreen({ onBack }: Props) {
             </View>
           </View>
 
-          <Text style={styles.label}>NOM</Text>
+          <Text style={styles.label}>{t('name')}</Text>
           <TextInput
-            style={commonStyles.input}
+            style={[commonStyles.input, { backgroundColor: colors.tertiary, color: colors.text, borderColor: colors.borderLight }]}
             value={profile.name}
             onChangeText={(v) => setProfile((p) => ({ ...p, name: v }))}
-            placeholder="Votre nom"
+            placeholder={t('yourNamePlaceholder')}
             placeholderTextColor={colors.textTertiary}
           />
 
-          <Text style={styles.label}>EMAIL</Text>
+          <Text style={styles.label}>{t('email')}</Text>
           <TextInput
-            style={[commonStyles.input, styles.inputDisabled]}
+            style={[commonStyles.input, { backgroundColor: colors.tertiary, color: colors.text, borderColor: colors.borderLight }, styles.inputDisabled]}
             value={profile.email}
             editable={false}
           />
 
-          <Text style={styles.label}>NOM DU SITE</Text>
+          <Text style={styles.label}>{t('siteName')}</Text>
           <TextInput
-            style={commonStyles.input}
+            style={[commonStyles.input, { backgroundColor: colors.tertiary, color: colors.text, borderColor: colors.borderLight }]}
             value={profile.site_name}
             onChangeText={(v) => setProfile((p) => ({ ...p, site_name: v }))}
-            placeholder="Mon site"
+            placeholder={t('mySitePlaceholder')}
             placeholderTextColor={colors.textTertiary}
           />
 
-          <Text style={styles.label}>TÉLÉPHONE</Text>
+          <Text style={styles.label}>{t('phone')}</Text>
           <TextInput
-            style={commonStyles.input}
+            style={[commonStyles.input, { backgroundColor: colors.tertiary, color: colors.text, borderColor: colors.borderLight }]}
             value={profile.phone}
             onChangeText={(v) => setProfile((p) => ({ ...p, phone: v }))}
             placeholder="+33 6 00 00 00 00"
@@ -225,10 +234,65 @@ export function ProfileScreen({ onBack }: Props) {
             keyboardType="phone-pad"
           />
 
+          {/* Security — Biometric */}
+          {biometricAvailable && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('security')}</Text>
+              <TouchableOpacity
+                style={styles.connectorCard}
+                onPress={toggleBiometric}
+                activeOpacity={0.7}
+              >
+                <View style={styles.connectorInfo}>
+                  <View style={styles.connectorHeader}>
+                    <Ionicons
+                      name={biometricType === 'Face ID' ? 'scan-outline' : 'finger-print'}
+                      size={20}
+                      color={colors.accent}
+                    />
+                    <Text style={styles.connectorName}>{biometricType}</Text>
+                  </View>
+                  <Text style={[styles.connectorAccount, { marginLeft: 28 }]}>
+                    {t('lockOnLaunch')}
+                  </Text>
+                </View>
+                <View style={[styles.biometricToggle, biometricEnabled && styles.biometricToggleOn]}>
+                  <View style={[styles.biometricKnob, biometricEnabled && styles.biometricKnobOn]} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Appearance — Theme */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('appearance')}</Text>
+            <View style={styles.themeRow}>
+              {(['dark', 'light', 'system'] as const).map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.themeChip, themeMode === m && styles.themeChipActive]}
+                  onPress={() => setThemeMode(m)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`${t(m === 'dark' ? 'dark' : m === 'light' ? 'light' : 'system')}`}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name={m === 'dark' ? 'moon-outline' : m === 'light' ? 'sunny-outline' : 'phone-portrait-outline'}
+                    size={16}
+                    color={themeMode === m ? colors.white : colors.textSecondary}
+                  />
+                  <Text style={[styles.themeChipText, themeMode === m && styles.themeChipTextActive]}>
+                    {t(m === 'dark' ? 'dark' : m === 'light' ? 'light' : 'system')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {/* Connecteurs — unified view */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              CONNECTEURS ({integrations.length + activeNangoConnections.length})
+              {t('connectors')} ({integrations.length + activeNangoConnections.length})
             </Text>
 
             {/* Connected integrations (from /api/integrations/my) */}
@@ -249,7 +313,7 @@ export function ProfileScreen({ onBack }: Props) {
                 </View>
                 <View style={[styles.connectorBadge, !integ.isActive && { backgroundColor: colors.tertiary }]}>
                   <Text style={[styles.connectorBadgeText, !integ.isActive && { color: colors.textTertiary }]}>
-                    {integ.isActive ? 'Actif' : 'Inactif'}
+                    {integ.isActive ? t('active') : t('inactive')}
                   </Text>
                 </View>
               </View>
@@ -275,7 +339,7 @@ export function ProfileScreen({ onBack }: Props) {
                     onPress={() => handleDisconnect(conn.provider)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.disconnectText}>Retirer</Text>
+                    <Text style={styles.disconnectText}>{t('disconnect')}</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -294,20 +358,20 @@ export function ProfileScreen({ onBack }: Props) {
                   </View>
                 </View>
                 <View style={[styles.connectorBadge, { backgroundColor: colors.errorMuted }]}>
-                  <Text style={[styles.connectorBadgeText, { color: colors.error }]}>Erreur</Text>
+                  <Text style={[styles.connectorBadgeText, { color: colors.error }]}>{t('error')}</Text>
                 </View>
               </View>
             ))}
 
             {integrations.length === 0 && activeNangoConnections.length === 0 && (
-              <Text style={styles.noConnectors}>Aucun connecteur actif</Text>
+              <Text style={styles.noConnectors}>{t('noConnectors')}</Text>
             )}
           </View>
 
           {/* Available providers to connect */}
           {nangoProviders.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>CONNECTER UN SERVICE</Text>
+              <Text style={styles.sectionTitle}>{t('connectService')}</Text>
               {nangoProviders.map((provider: any) => {
                 const pid = provider.id || provider.name;
                 const pName = provider.displayName || provider.display_name || provider.name || pid;
@@ -323,7 +387,7 @@ export function ProfileScreen({ onBack }: Props) {
                     </View>
                     {isConnected ? (
                       <View style={styles.connectedBadge}>
-                        <Text style={styles.connectedBadgeText}>Connecté</Text>
+                        <Text style={styles.connectedBadgeText}>{t('connected')}</Text>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -333,7 +397,7 @@ export function ProfileScreen({ onBack }: Props) {
                         activeOpacity={0.7}
                       >
                         <Text style={styles.connectText}>
-                          {connectingProvider === provider.id ? '...' : 'Connecter'}
+                          {connectingProvider === provider.id ? '...' : t('connect')}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -348,11 +412,8 @@ export function ProfileScreen({ onBack }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary },
-  header: {
-    ...commonStyles.header,
-  },
   saveBtn: { color: colors.accent, fontSize: 15, fontWeight: '700' },
   form: { padding: spacing.xl, gap: spacing.xs },
   avatarSection: { alignItems: 'center', marginBottom: spacing.xl },
@@ -412,4 +473,30 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.error,
   },
   disconnectText: { color: colors.error, fontSize: 12, fontWeight: '600' },
+  biometricToggle: {
+    width: 48, height: 28, borderRadius: 14,
+    backgroundColor: colors.tertiary, justifyContent: 'center', paddingHorizontal: 3,
+  },
+  biometricToggleOn: { backgroundColor: colors.accent },
+  biometricKnob: {
+    width: 22, height: 22, borderRadius: 11, backgroundColor: colors.white,
+  },
+  biometricKnobOn: { alignSelf: 'flex-end' as const },
+  themeRow: {
+    flexDirection: 'row', gap: spacing.sm,
+  },
+  themeChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 12, borderRadius: radii.md,
+    backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border,
+  },
+  themeChipActive: {
+    backgroundColor: colors.accent, borderColor: colors.accent,
+  },
+  themeChipText: {
+    color: colors.textSecondary, fontSize: 13, fontWeight: '600',
+  },
+  themeChipTextActive: {
+    color: colors.white,
+  },
 });

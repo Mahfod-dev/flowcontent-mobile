@@ -6,12 +6,29 @@ let socket: Socket | null = null;
 let currentSessionId: string | null = null;
 let currentToken: string | null = null;
 let isConnecting = false;
+let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+const HEARTBEAT_TIMEOUT_MS = 90_000; // 90s without pong → force reconnect
 
 // Persistent listener registries — survive socket recreation
 const streamListeners = new Set<(event: any) => void>();
 const typingListeners = new Set<(data: any) => void>();
 // Generic event listeners (connect, disconnect, etc.) — also survive reconnection
 const genericListeners = new Map<string, Set<(...args: any[]) => void>>();
+
+function clearHeartbeatTimer() {
+  if (heartbeatTimer) { clearTimeout(heartbeatTimer); heartbeatTimer = null; }
+}
+
+function resetHeartbeatTimer() {
+  clearHeartbeatTimer();
+  heartbeatTimer = setTimeout(() => {
+    console.warn('[Socket] Heartbeat timeout — forcing reconnect');
+    if (socket) {
+      socket.disconnect();
+      // socket.io auto-reconnection will kick in
+    }
+  }, HEARTBEAT_TIMEOUT_MS);
+}
 
 function attachListenersToSocket(s: Socket) {
   s.on('chat:stream', (event: any) => {
@@ -62,15 +79,20 @@ export const socketService = {
       if (currentSessionId) {
         socket?.emit('join:session', { sessionId: currentSessionId });
       }
+      // Start heartbeat watchdog
+      resetHeartbeatTimer();
     });
     socket.on('disconnect', (reason) => {
       isConnecting = false;
       console.log('[Socket] Disconnected:', reason);
+      clearHeartbeatTimer();
     });
     socket.on('connect_error', (err) => {
       isConnecting = false;
       console.warn('[Socket] Error:', err.message);
     });
+    // Any incoming event resets the heartbeat timer
+    socket.onAny(() => { resetHeartbeatTimer(); });
 
     return socket;
   },
@@ -137,6 +159,7 @@ export const socketService = {
     currentSessionId = null;
     currentToken = null;
     isConnecting = false;
+    clearHeartbeatTimer();
     socket?.removeAllListeners();
     socket?.disconnect();
     socket = null;

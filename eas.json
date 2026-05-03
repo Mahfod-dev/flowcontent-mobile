@@ -37,15 +37,7 @@
     }
   },
   "submit": {
-    "preview": {
-      "ios": {
-        "ascAppId": "com.flowcontent.app"
-      }
-    },
-    "production": {
-      "ios": {
-        "ascAppId": "com.flowcontent.app"
-      }
-    }
+    "preview": {},
+    "production": {}
   }
 }

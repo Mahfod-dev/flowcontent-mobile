@@ -1,5 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import * as Sentry from '@sentry/react-native';
+import * as Updates from 'expo-updates';
 import {
   ActivityIndicator,
   Alert,
@@ -7,13 +9,20 @@ import {
   Keyboard,
   PanResponder,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { ThemeProvider, useColors } from './src/contexts/ThemeContext';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { SignupScreen } from './src/screens/SignupScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { NotificationsScreen } from './src/screens/NotificationsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
@@ -21,19 +30,53 @@ import { DashboardScreen } from './src/screens/DashboardScreen';
 import { UpgradeScreen } from './src/screens/UpgradeScreen';
 import { MediaScreen } from './src/screens/MediaScreen';
 import { Sidebar } from './src/components/Sidebar';
+import { useBiometric } from './src/hooks/useBiometric';
+import { useDeepLink } from './src/hooks/useDeepLink';
 import { apiService } from './src/services/api';
 import { notificationService } from './src/services/notifications';
 import { Session } from './src/types';
-import { colors, DRAWER_WIDTH } from './src/theme';
+import { t } from './src/i18n';
+import { ColorPalette, DRAWER_WIDTH } from './src/theme';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? '',
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
+
+const ONBOARDING_DONE_KEY = 'fc_onboarding_done';
 
 function AppContent() {
   const { user, isLoading, logout } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media'>('chat');
+  const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  const { isEnabled: biometricEnabled, authenticate } = useBiometric();
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // Check onboarding status
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_DONE_KEY).then((v) => {
+      setShowOnboarding(v !== 'true');
+    });
+  }, []);
+
+  // Biometric lock on app start
+  useEffect(() => {
+    if (user && biometricEnabled) {
+      setBiometricLocked(true);
+      authenticate().then((ok) => {
+        if (ok) setBiometricLocked(false);
+      });
+    }
+  }, [user?.id]); // only on initial mount per user
 
   // Init push notifications
   const pushTokenRef = useRef<string | null>(null);
@@ -49,6 +92,34 @@ function AppContent() {
     const sub = notificationService.addTapListener();
     return () => sub.remove();
   }, [user?.token]);
+
+  // Deep linking — flowcontent://chat/123, flowcontent://dashboard, etc.
+  const handleDeepLink = useCallback((screen: typeof activeScreen, sid?: string) => {
+    setActiveScreen(screen);
+    if (sid) setSessionId(sid);
+  }, []);
+  useDeepLink(handleDeepLink);
+
+  // OTA update check
+  useEffect(() => {
+    if (__DEV__) return;
+    (async () => {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          Alert.alert(
+            t('updateAvailable'),
+            t('updateMessage'),
+            [
+              { text: t('later'), style: 'cancel' },
+              { text: t('restart'), onPress: () => Updates.reloadAsync() },
+            ],
+          );
+        }
+      } catch {}
+    })();
+  }, []);
 
   // Load most recent session on login
   useEffect(() => {
@@ -68,8 +139,8 @@ function AppContent() {
       } catch (err: any) {
         if (cancelled) return;
         if (err?.message === 'TOKEN_EXPIRED') {
-          Alert.alert('Session expirée', 'Veuillez vous reconnecter.', [
-            { text: 'OK', onPress: logout },
+          Alert.alert(t('sessionExpired'), t('sessionExpiredMessage'), [
+            { text: t('ok'), onPress: logout },
           ]);
           return;
         }
@@ -79,9 +150,9 @@ function AppContent() {
           setSessionId(result.sessionId);
         } catch (err2: any) {
           if (cancelled) return;
-          Alert.alert('Erreur', err2?.message || 'Impossible de charger les conversations', [
-            { text: 'Réessayer', onPress: () => setSessionId(null) },
-            { text: 'Se reconnecter', style: 'destructive', onPress: logout },
+          Alert.alert(t('error'), err2?.message || 'Impossible de charger les conversations', [
+            { text: t('retry'), onPress: () => setSessionId(null) },
+            { text: t('reconnect'), style: 'destructive', onPress: logout },
           ]);
         }
       }
@@ -193,7 +264,41 @@ function AppContent() {
     );
   }
 
-  if (!user) return <LoginScreen />;
+  // Onboarding — first time only
+  if (showOnboarding === true && !user) {
+    return (
+      <OnboardingScreen onComplete={() => {
+        AsyncStorage.setItem(ONBOARDING_DONE_KEY, 'true');
+        setShowOnboarding(false);
+      }} />
+    );
+  }
+
+  if (!user) {
+    return authScreen === 'signup'
+      ? <SignupScreen onSwitchToLogin={() => setAuthScreen('login')} />
+      : <LoginScreen onSwitchToSignup={() => setAuthScreen('signup')} />;
+  }
+
+  // Biometric lock screen
+  if (biometricLocked) {
+    return (
+      <View style={styles.lockScreen}>
+        <View style={styles.lockContent}>
+          <Ionicons name="lock-closed" size={48} color={colors.accent} />
+          <Text style={styles.lockTitle}>FlowContent</Text>
+          <Text style={styles.lockSubtitle}>{t('authRequired')}</Text>
+          <TouchableOpacity style={styles.lockBtn} onPress={() => authenticate().then((ok) => { if (ok) setBiometricLocked(false); })} activeOpacity={0.7}>
+            <Ionicons name="finger-print" size={24} color={colors.white} />
+            <Text style={styles.lockBtnText}>{t('unlock')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setBiometricLocked(false)} activeOpacity={0.7} style={styles.skipBiometric}>
+            <Text style={styles.skipBiometricText}>{t('continueWithout')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} {...edgePanResponder.panHandlers}>
@@ -246,20 +351,24 @@ function AppContent() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <AuthProvider>
-          <StatusBar style="light" />
-          <AppContent />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <StatusBar style="light" />
+            <AppContent />
+          </AuthProvider>
+        </ThemeProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
 
-const styles = StyleSheet.create({
+export default Sentry.wrap(App);
+
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
@@ -284,5 +393,47 @@ const styles = StyleSheet.create({
     zIndex: 20,
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: colors.border,
+  },
+  lockScreen: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockContent: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  lockTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  lockSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  lockBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  lockBtnText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  skipBiometric: {
+    marginTop: 8,
+    paddingVertical: 10,
+  },
+  skipBiometricText: {
+    color: colors.textTertiary,
+    fontSize: 14,
   },
 });

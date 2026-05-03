@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { apiService } from '../services/api';
@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   loginWithGoogleCode: (accessToken: string) => Promise<void>;
   logout: () => void;
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   login: async () => {},
+  register: async () => {},
   loginWithGoogle: async () => {},
   loginWithGoogleCode: async () => {},
   logout: () => {},
@@ -97,10 +99,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Session timeout — auto-logout after 30 min in background
+  const backgroundTimestamp = useRef<number | null>(null);
+  const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
   // Reconnect socket + re-join session when app comes back to foreground
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && user?.token) {
+      if (state === 'background' || state === 'inactive') {
+        backgroundTimestamp.current = Date.now();
+      } else if (state === 'active' && user?.token) {
+        // Check session timeout
+        if (backgroundTimestamp.current && Date.now() - backgroundTimestamp.current > SESSION_TIMEOUT_MS) {
+          backgroundTimestamp.current = null;
+          Alert.alert('Session expirée', 'Vous avez été déconnecté après 30 minutes d\'inactivité.', [
+            { text: 'OK', onPress: logout },
+          ]);
+          return;
+        }
+        backgroundTimestamp.current = null;
+
         const wasDisconnected = !socketService.isConnected();
         if (wasDisconnected) {
           socketService.connect(user.token);
@@ -110,10 +128,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return () => subscription.remove();
-  }, [user?.token]);
+  }, [user?.token, logout]);
 
   const login = async (email: string, password: string) => {
     const data = await apiService.login(email, password);
+    const { access_token, user: userData, refresh_token } = data;
+    if (!access_token) throw new Error('Pas de token dans la réponse');
+    await apiService.saveToken(access_token);
+    if (refresh_token) await apiService.saveRefreshToken(refresh_token);
+    socketService.connect(access_token);
+    setUser({ ...userData, token: access_token });
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    const data = await apiService.register(name, email, password);
     const { access_token, user: userData, refresh_token } = data;
     if (!access_token) throw new Error('Pas de token dans la réponse');
     await apiService.saveToken(access_token);
@@ -145,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, loginWithGoogleCode, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, loginWithGoogle, loginWithGoogleCode, logout }}>
       {children}
     </AuthContext.Provider>
   );

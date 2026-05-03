@@ -7,15 +7,59 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store
 
 const DEFAULT_TIMEOUT_MS = 30_000; // 30s default timeout for all API calls
 
-/** Fetch with AbortController timeout — prevents hanging requests */
-async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+/** Decode JWT payload without external library (base64url → JSON) */
+function decodeJwtPayload(token: string): { exp?: number; sub?: string } | null {
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    // base64url → base64
+    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    // pad to multiple of 4
+    while (payload.length % 4) payload += '=';
+    const json = atob(payload);
+    return JSON.parse(json);
+  } catch {
+    return null;
   }
+}
+
+/** Check if JWT expires within the next N seconds (default 60s) */
+function isTokenExpiringSoon(token: string, bufferSeconds = 60): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return false;
+  return payload.exp * 1000 < Date.now() + bufferSeconds * 1000;
+}
+
+/** Fetch with AbortController timeout + exponential backoff on 429/5xx */
+async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+  const MAX_RETRIES = 3;
+  let lastError: any;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timer);
+      // Retry on 429 (rate-limited) or 502/503/504 (transient server errors)
+      if ((res.status === 429 || res.status >= 502) && attempt < MAX_RETRIES) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      return res;
+    } catch (err: any) {
+      clearTimeout(timer);
+      lastError = err;
+      // Retry on network/timeout errors
+      if (attempt < MAX_RETRIES && (err.name === 'AbortError' || err.message?.includes('network'))) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
 }
 
 async function safeJson(res: Response): Promise<any> {
@@ -76,16 +120,23 @@ async function tryRefreshToken(): Promise<string | null> {
 }
 
 async function authFetch(url: string, token: string, init?: RequestInit, critical = true): Promise<Response> {
+  // Proactive refresh: if token expires within 60s, refresh before making the call
+  let activeToken = token;
+  if (isTokenExpiringSoon(token)) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) activeToken = refreshed;
+  }
+
   const headers: Record<string, string> = {
     ...(init?.headers as Record<string, string> || {}),
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${activeToken}`,
   };
   if (_activeSiteDomain) {
     headers['X-Site-Domain'] = _activeSiteDomain;
   }
   const res = await fetchWithTimeout(url, { ...init, headers });
 
-  // Auto-refresh on 401
+  // Auto-refresh on 401 (fallback if proactive refresh missed)
   if (res.status === 401 && critical) {
     const newToken = await tryRefreshToken();
     if (newToken) {
@@ -166,6 +217,38 @@ export const apiService = {
     }
     if (!res.ok) {
       throw new Error(data?.error?.message || data?.message || 'Email ou mot de passe incorrect');
+    }
+    return data;
+  },
+
+  async register(name: string, email: string, password: string) {
+    const res = await fetchWithTimeout(`${API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Erreur serveur (${res.status})`);
+    }
+    if (!res.ok) {
+      throw new Error(data?.error?.message || data?.message || 'Inscription échouée');
+    }
+    return data;
+  },
+
+  async forgotPassword(email: string) {
+    const res = await fetchWithTimeout(`${API_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await safeJson(res);
+    if (!res.ok) {
+      throw new Error(data?.message || 'Erreur');
     }
     return data;
   },

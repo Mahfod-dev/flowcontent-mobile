@@ -1,8 +1,9 @@
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ToolCall } from '../types';
-import { colors, spacing } from '../theme';
+import { useColors } from '../contexts/ThemeContext';
+import { ColorPalette, spacing } from '../theme';
 
 // Friendly tool name mapping
 const TOOL_LABELS: Record<string, string> = {
@@ -31,7 +32,7 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function ElapsedTimer({ startedAt }: { startedAt: number }) {
+function ElapsedTimer({ startedAt, style }: { startedAt: number; style: any }) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
@@ -39,10 +40,13 @@ function ElapsedTimer({ startedAt }: { startedAt: number }) {
     }, 1000);
     return () => clearInterval(interval);
   }, [startedAt]);
-  return <Text style={styles.elapsed}>{formatDuration(elapsed)}</Text>;
+  return <Text style={style}>{formatDuration(elapsed)}</Text>;
 }
 
 export const ToolActivity = memo(function ToolActivity({ tools }: { tools: ToolCall[] }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (tools.length === 0) return null;
 
   return (
@@ -61,7 +65,7 @@ export const ToolActivity = memo(function ToolActivity({ tools }: { tools: ToolC
             <Text style={styles.progress} numberOfLines={1}>{tool.message}</Text>
           )}
           {tool.status === 'running' ? (
-            <ElapsedTimer startedAt={tool.startedAt} />
+            <ElapsedTimer startedAt={tool.startedAt} style={styles.elapsed} />
           ) : tool.durationMs ? (
             <Text style={styles.duration}>{formatDuration(tool.durationMs)}</Text>
           ) : null}
@@ -71,7 +75,7 @@ export const ToolActivity = memo(function ToolActivity({ tools }: { tools: ToolC
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

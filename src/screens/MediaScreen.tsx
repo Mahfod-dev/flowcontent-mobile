@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
   FlatList,
-  Image,
   PanResponder,
   RefreshControl,
   StyleSheet,
@@ -12,13 +11,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { MediaFile } from '../types';
-import { colors, commonStyles, radii, spacing } from '../theme';
+import { useColors } from '../contexts/ThemeContext';
+import { t } from '../i18n';
+import { ColorPalette } from '../theme';
+import { commonStyles, radii, spacing } from '../theme';
 import { safeOpenURL } from '../utils/safeOpenURL';
+import { MediaSkeleton } from '../components/Skeleton';
 
 interface MediaScreenProps {
   onBack: () => void;
@@ -46,10 +50,11 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
-function SwipeableFileRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+function SwipeableFileRow({ onDelete, children, colors }: { onDelete: () => void; children: React.ReactNode; colors: ColorPalette }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const onDeleteRef = useRef(onDelete);
   onDeleteRef.current = onDelete;
+  const swipeStyles = useMemo(() => createSwipeStyles(colors), [colors]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -71,19 +76,19 @@ function SwipeableFileRow({ onDelete, children }: { onDelete: () => void; childr
   ).current;
 
   return (
-    <View style={styles.swipeContainer}>
+    <View style={swipeStyles.swipeContainer}>
       <TouchableOpacity
-        style={styles.deleteAction}
+        style={swipeStyles.deleteAction}
         onPress={() => {
           Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
           onDeleteRef.current();
         }}
         activeOpacity={0.7}
       >
-        <Text style={styles.deleteActionText}>Supprimer</Text>
+        <Text style={swipeStyles.deleteActionText}>{t('delete')}</Text>
       </TouchableOpacity>
       <Animated.View
-        style={[styles.swipeContent, { transform: [{ translateX }] }]}
+        style={[swipeStyles.swipeContent, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
         {children}
@@ -95,6 +100,8 @@ function SwipeableFileRow({ onDelete, children }: { onDelete: () => void; childr
 export function MediaScreen({ onBack }: MediaScreenProps) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,12 +129,12 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
 
   const handleDelete = useCallback((file: MediaFile) => {
     Alert.alert(
-      'Supprimer le fichier',
-      `Supprimer "${file.name}" ?`,
+      t('deleteFile'),
+      `${t('delete')} "${file.name}" ?`,
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             if (!user?.token) return;
@@ -135,7 +142,7 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
             if (ok) {
               setFiles((prev) => prev.filter((f) => f.path !== file.path));
             } else {
-              Alert.alert('Erreur', 'Impossible de supprimer le fichier.');
+              Alert.alert(t('error'), 'Impossible de supprimer le fichier.');
             }
           },
         },
@@ -153,7 +160,7 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
     if (url) {
       await safeOpenURL(url);
     } else {
-      Alert.alert('Erreur', 'Impossible d\'ouvrir le fichier.');
+      Alert.alert(t('error'), 'Impossible d\'ouvrir le fichier.');
     }
   }, [user?.token]);
 
@@ -168,10 +175,10 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
     const isImage = IMAGE_TYPES.includes(item.mimeType);
     const thumbUrl = item.url;
     return (
-    <SwipeableFileRow onDelete={() => handleDelete(item)}>
+    <SwipeableFileRow onDelete={() => handleDelete(item)} colors={colors}>
       <TouchableOpacity style={styles.fileRow} onPress={() => handleOpen(item)} activeOpacity={0.7}>
         {isImage && thumbUrl ? (
-          <Image source={{ uri: thumbUrl }} style={styles.fileThumbnail} />
+          <Image source={thumbUrl} style={styles.fileThumbnail} contentFit="cover" transition={150} />
         ) : (
           <View style={styles.fileIconWrap}>
             <Ionicons name={getFileIconName(item.mimeType)} size={24} color={colors.textSecondary} />
@@ -199,11 +206,11 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[commonStyles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={onBack} style={commonStyles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Mes fichiers</Text>
+        <Text style={[commonStyles.headerTitle, { color: colors.text }]}>{t('myFiles')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -217,7 +224,7 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'all' ? 'Tous' : tab === 'images' ? 'Images' : tab === 'audio' ? 'Audio' : 'Documents'}
+              {tab === 'all' ? t('all') : tab === 'images' ? t('images') : tab === 'audio' ? t('audio') : t('documents')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -225,24 +232,25 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
 
       {/* Content */}
       {loading ? (
-        <View style={commonStyles.loadingContainer}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <MediaSkeleton />
       ) : (
         <FlatList
           data={filteredFiles}
           keyExtractor={(item) => item.path}
           renderItem={renderFile}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + spacing.lg }]}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={9}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="folder-open-outline" size={48} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>Aucun fichier</Text>
+              <Text style={styles.emptyText}>{t('noFiles')}</Text>
               <Text style={styles.emptySubtext}>
-                Uploadez des fichiers via le chat pour les retrouver ici.
+                {t('uploadHint')}
               </Text>
             </View>
           }
@@ -252,13 +260,36 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createSwipeStyles = (colors: ColorPalette) => StyleSheet.create({
+  swipeContainer: {
+    overflow: 'hidden',
+    borderRadius: radii.sm,
+    marginBottom: spacing.xs,
+  },
+  swipeContent: {
+    backgroundColor: colors.primary,
+  },
+  deleteAction: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteActionText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
-  },
-  header: {
-    ...commonStyles.header,
   },
   tabs: {
     flexDirection: 'row',
@@ -289,29 +320,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-  },
-  swipeContainer: {
-    overflow: 'hidden',
-    borderRadius: radii.sm,
-    marginBottom: spacing.xs,
-  },
-  swipeContent: {
-    backgroundColor: colors.primary,
-  },
-  deleteAction: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 80,
-    backgroundColor: colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteActionText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
   },
   fileRow: {
     flexDirection: 'row',

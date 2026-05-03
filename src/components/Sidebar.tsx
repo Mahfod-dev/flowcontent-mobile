@@ -20,7 +20,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
 import { Credits, Session, SiteDomain } from '../types';
-import { colors, radii, spacing } from '../theme';
+import { useColors } from '../contexts/ThemeContext';
+import { t } from '../i18n';
+import { ColorPalette } from '../theme';
+import { radii, spacing } from '../theme';
 
 const PINNED_KEY = 'fc_pinned_sessions';
 
@@ -36,12 +39,13 @@ interface SidebarProps {
   onOpenMedia?: () => void;
 }
 
-function SwipeableRow({ onDelete, onPin, isPinned, children }: { onDelete: () => void; onPin: () => void; isPinned: boolean; children: React.ReactNode }) {
+function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelete: () => void; onPin: () => void; isPinned: boolean; children: React.ReactNode; colors: ColorPalette }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const onDeleteRef = useRef(onDelete);
   const onPinRef = useRef(onPin);
   onDeleteRef.current = onDelete;
   onPinRef.current = onPin;
+  const swipeStyles = useMemo(() => createSwipeStyles(colors), [colors]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -67,31 +71,31 @@ function SwipeableRow({ onDelete, onPin, isPinned, children }: { onDelete: () =>
   ).current;
 
   return (
-    <View style={styles.swipeContainer}>
+    <View style={swipeStyles.swipeContainer}>
       {/* Pin action (swipe right) */}
       <TouchableOpacity
-        style={styles.pinAction}
+        style={swipeStyles.pinAction}
         onPress={() => {
           Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
           onPinRef.current();
         }}
         activeOpacity={0.7}
       >
-        <Text style={styles.pinActionText}>{isPinned ? 'Désépingler' : 'Épingler'}</Text>
+        <Text style={swipeStyles.pinActionText}>{isPinned ? t('unpin') : t('pin')}</Text>
       </TouchableOpacity>
       {/* Delete action (swipe left) */}
       <TouchableOpacity
-        style={styles.deleteAction}
+        style={swipeStyles.deleteAction}
         onPress={() => {
           Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
           onDeleteRef.current();
         }}
         activeOpacity={0.7}
       >
-        <Text style={styles.deleteActionText}>Supprimer</Text>
+        <Text style={swipeStyles.deleteActionText}>{t('delete')}</Text>
       </TouchableOpacity>
       <Animated.View
-        style={[styles.swipeContent, { transform: [{ translateX }] }]}
+        style={[swipeStyles.swipeContent, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
         {children}
@@ -103,6 +107,8 @@ function SwipeableRow({ onDelete, onPin, isPinned, children }: { onDelete: () =>
 export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile, onOpenDashboard, onOpenUpgrade, onOpenMedia }: SidebarProps) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -203,12 +209,12 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
   const handleDelete = useCallback(
     (session: Session) => {
       Alert.alert(
-        'Supprimer la conversation',
-        `Supprimer "${session.title || 'cette conversation'}" ?`,
+        t('deleteConversation'),
+        `${t('delete')} "${session.title || t('untitledConversation')}" ?`,
         [
-          { text: 'Annuler', style: 'cancel' },
+          { text: t('cancel'), style: 'cancel' },
           {
-            text: 'Supprimer',
+            text: t('delete'),
             style: 'destructive',
             onPress: async () => {
               if (!user?.token) return;
@@ -231,26 +237,26 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
     (session: Session) => {
       const isPinned = pinnedIds.has(session.id);
       Alert.alert(
-        session.title || 'Conversation',
+        session.title || t('untitledConversation'),
         '',
         [
           {
-            text: isPinned ? 'Désépingler' : 'Épingler',
+            text: isPinned ? t('unpin') : t('pin'),
             onPress: () => togglePin(session.id),
           },
           {
-            text: 'Renommer',
+            text: t('rename'),
             onPress: () => {
               setRenameText(session.title || '');
               setRenameModal(session);
             },
           },
           {
-            text: 'Supprimer',
+            text: t('delete'),
             style: 'destructive',
             onPress: () => handleDelete(session),
           },
-          { text: 'Annuler', style: 'cancel' },
+          { text: t('cancel'), style: 'cancel' },
         ]
       );
     },
@@ -275,7 +281,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
     const isActive = item.id === activeSessionId;
     const isPinned = pinnedIds.has(item.id);
     return (
-      <SwipeableRow onDelete={() => handleDelete(item)} onPin={() => togglePin(item.id)} isPinned={isPinned}>
+      <SwipeableRow onDelete={() => handleDelete(item)} onPin={() => togglePin(item.id)} isPinned={isPinned} colors={colors}>
         <TouchableOpacity
           style={[styles.sessionItem, isActive && styles.sessionActive]}
           onPress={() => onSelectSession(item)}
@@ -285,7 +291,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
           <View style={styles.sessionTitleRow}>
             {isPinned && <Ionicons name="pin" size={12} color={colors.accent} />}
             <Text style={[styles.sessionTitle, isActive && styles.sessionTitleActive, isPinned && { flex: 1 }]} numberOfLines={1}>
-              {item.title || 'Conversation sans titre'}
+              {item.title || t('untitledConversation')}
             </Text>
           </View>
           {item.last_message_at && (
@@ -306,7 +312,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
       {/* New chat button */}
       <TouchableOpacity style={styles.newChatBtn} onPress={onNewChat} activeOpacity={0.7}>
         <Ionicons name="add-outline" size={20} color={colors.white} />
-        <Text style={styles.newChatText}>Nouvelle conversation</Text>
+        <Text style={styles.newChatText}>{t('newConversation')}</Text>
       </TouchableOpacity>
 
       {/* Site switcher */}
@@ -317,7 +323,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             onPress={() => setActiveSiteId(null)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.siteChipText, !activeSiteId && styles.siteChipTextActive]}>Tous</Text>
+            <Text style={[styles.siteChipText, !activeSiteId && styles.siteChipTextActive]}>{t('all')}</Text>
           </TouchableOpacity>
           {sites.map((site) => (
             <TouchableOpacity
@@ -339,7 +345,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
         <Ionicons name="search-outline" size={16} color={colors.textTertiary} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Rechercher..."
+          placeholder={t('search')}
           placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -358,6 +364,9 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
           keyExtractor={(item) => item.id}
           renderItem={renderSession}
           contentContainerStyle={styles.list}
+          initialNumToRender={20}
+          maxToRenderPerBatch={15}
+          windowSize={11}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -367,7 +376,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             />
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucune conversation</Text>
+            <Text style={styles.emptyText}>{t('noConversations')}</Text>
           }
         />
       )}
@@ -387,7 +396,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
           {onOpenNotifications && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenNotifications} activeOpacity={0.7}>
               <Ionicons name="notifications-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>Notifs</Text>
+              <Text style={styles.footerActionLabel}>{t('notifs')}</Text>
               {notifCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{notifCount > 99 ? '99+' : notifCount}</Text>
@@ -398,25 +407,25 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
           {onOpenDashboard && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenDashboard} activeOpacity={0.7}>
               <Ionicons name="bar-chart-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>Stats</Text>
+              <Text style={styles.footerActionLabel}>{t('stats')}</Text>
             </TouchableOpacity>
           )}
           {onOpenUpgrade && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenUpgrade} activeOpacity={0.7}>
               <Ionicons name="diamond-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>Abo</Text>
+              <Text style={styles.footerActionLabel}>{t('subscription')}</Text>
             </TouchableOpacity>
           )}
           {onOpenMedia && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenMedia} activeOpacity={0.7}>
               <Ionicons name="folder-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>Fichiers</Text>
+              <Text style={styles.footerActionLabel}>{t('files')}</Text>
             </TouchableOpacity>
           )}
           {onOpenProfile && (
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenProfile} activeOpacity={0.7}>
               <Ionicons name="person-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>Profil</Text>
+              <Text style={styles.footerActionLabel}>{t('profile')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -425,7 +434,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
         </Text>
         <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={16} color={colors.error} />
-          <Text style={styles.logoutText}>Déconnexion</Text>
+          <Text style={styles.logoutText}>{t('logout')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -433,12 +442,12 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
       <Modal visible={!!renameModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Renommer</Text>
+            <Text style={styles.modalTitle}>{t('rename')}</Text>
             <TextInput
               style={styles.modalInput}
               value={renameText}
               onChangeText={setRenameText}
-              placeholder="Nom de la conversation"
+              placeholder={t('conversationName')}
               placeholderTextColor={colors.textTertiary}
               autoFocus
               onSubmitEditing={handleRename}
@@ -449,7 +458,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
                 onPress={() => { setRenameModal(null); setRenameText(''); }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.modalCancelText}>Annuler</Text>
+                <Text style={styles.modalCancelText}>{t('cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalConfirmBtn, !renameText.trim() && styles.modalConfirmDisabled]}
@@ -457,7 +466,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
                 disabled={!renameText.trim()}
                 activeOpacity={0.7}
               >
-                <Text style={styles.modalConfirmText}>Renommer</Text>
+                <Text style={styles.modalConfirmText}>{t('rename')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -467,7 +476,48 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
   );
 }
 
-const styles = StyleSheet.create({
+const createSwipeStyles = (colors: ColorPalette) => StyleSheet.create({
+  swipeContainer: {
+    overflow: 'hidden',
+    borderRadius: radii.sm,
+    marginBottom: 2,
+  },
+  swipeContent: {
+    backgroundColor: colors.sidebar,
+  },
+  pinAction: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pinActionText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  deleteAction: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteActionText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.sidebar,
@@ -545,44 +595,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.xs,
-  },
-  swipeContainer: {
-    overflow: 'hidden',
-    borderRadius: radii.sm,
-    marginBottom: 2,
-  },
-  swipeContent: {
-    backgroundColor: colors.sidebar,
-  },
-  pinAction: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 80,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pinActionText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  deleteAction: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 80,
-    backgroundColor: colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteActionText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
   },
   sessionItem: {
     paddingVertical: spacing.md,

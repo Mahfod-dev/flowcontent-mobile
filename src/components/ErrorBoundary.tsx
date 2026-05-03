@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
+import { t } from '../i18n';
 
 interface State {
   hasError: boolean;
@@ -13,8 +15,9 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary]', error);
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
   }
 
   render() {
@@ -22,14 +25,14 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
       return (
         <View style={styles.container}>
           <Ionicons name="warning-outline" size={48} color="#FF453A" />
-          <Text style={styles.title}>Oups, quelque chose a planté</Text>
-          <Text style={styles.subtitle}>L'app a rencontré une erreur inattendue.</Text>
+          <Text style={styles.title}>{t('crashTitle')}</Text>
+          <Text style={styles.subtitle}>{t('crashSubtitle')}</Text>
           <TouchableOpacity
             style={styles.button}
             onPress={() => this.setState({ hasError: false })}
             activeOpacity={0.7}
           >
-            <Text style={styles.buttonText}>Réessayer</Text>
+            <Text style={styles.buttonText}>{t('retry')}</Text>
           </TouchableOpacity>
         </View>
       );
