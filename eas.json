@@ -18,7 +18,8 @@
         "image": "sdk-55"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
+        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "simulator": {
