@@ -5,26 +5,11 @@ import { ToolCall } from '../types';
 import { useColors } from '../contexts/ThemeContext';
 import { ColorPalette, spacing } from '../theme';
 
-// Friendly tool name mapping
-const TOOL_LABELS: Record<string, string> = {
-  search_google: 'Recherche Google',
-  web_scrape: 'Extraction web',
-  write_article: 'Rédaction article',
-  seo_audit: 'Audit SEO',
-  analyze_seo: 'Analyse SEO',
-  keyword_research: 'Recherche mots-clés',
-  competitor_analysis: 'Analyse concurrence',
-  ask_alexandre: 'Consultation Alexandre',
-  generate_image: 'Génération image',
-  wordpress_publish: 'Publication WordPress',
-  wordpress_create_post: 'Création article WP',
-  wordpress_update_post: 'Mise à jour article WP',
-  read_file: 'Lecture fichier',
-  write_file: 'Écriture fichier',
-};
-
+// Clean up tool name for display (displayLabel from backend is preferred)
 function getToolLabel(name: string): string {
-  return TOOL_LABELS[name] || name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  // Strip mcp prefixes: mcp_brave_search_query → query
+  const cleaned = name.replace(/^mcp_[a-z0-9]+_/, '');
+  return cleaned.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatDuration(ms: number): string {

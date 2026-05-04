@@ -207,11 +207,12 @@ export function useChat(sessionId: string, userId: string) {
           break;
         case 'stream:tool_start': {
           const toolId = event.toolCallId || `tool-${Date.now()}`;
+          const toolLabel = event.displayLabel || event.toolName || 'Outil';
           setToolCalls((prev) => [
             ...prev,
-            { id: toolId, name: event.toolName || 'Outil', status: 'running', startedAt: Date.now() },
+            { id: toolId, name: toolLabel, status: 'running', startedAt: Date.now() },
           ]);
-          setThinkingText(`${event.toolName || 'Outil en cours'}...`);
+          setThinkingText(`${toolLabel}...`);
           resetStreamTimeout();
           break;
         }
@@ -232,7 +233,7 @@ export function useChat(sessionId: string, userId: string) {
               t.id === event.toolCallId ? { ...t, message: event.message } : t
             )
           );
-          setThinkingText(`${event.message || event.toolName || 'En cours'}...`);
+          setThinkingText(`${event.message || event.displayLabel || event.toolName || 'En cours'}...`);
           resetStreamTimeout();
           break;
         case 'stream:heartbeat':
