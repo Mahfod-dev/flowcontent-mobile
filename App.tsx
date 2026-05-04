@@ -1,6 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
 import {
   ActivityIndicator,
@@ -37,13 +36,6 @@ import { notificationService } from './src/services/notifications';
 import { Session } from './src/types';
 import { t } from './src/i18n';
 import { ColorPalette, DRAWER_WIDTH } from './src/theme';
-
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
-Sentry.init({
-  dsn: SENTRY_DSN,
-  enabled: !__DEV__ && SENTRY_DSN.length > 0,
-  tracesSampleRate: 0.2,
-});
 
 const ONBOARDING_DONE_KEY = 'fc_onboarding_done';
 
@@ -367,7 +359,7 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+export default App;
 
 const createStyles = (colors: ColorPalette) => StyleSheet.create({
   container: {

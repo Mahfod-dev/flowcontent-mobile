@@ -1,14 +1,9 @@
 import React, { memo, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Modal, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-// expo-av native module (ExponentAV) may not be available in Expo Go
-let Video: any = null;
-let ResizeMode: any = { CONTAIN: 'contain' };
-try {
-  const av = require('expo-av');
-  Video = av.Video;
-  ResizeMode = av.ResizeMode;
-} catch {}
+// expo-av removed — video playback disabled for now
+const Video: any = null;
+const ResizeMode: any = { CONTAIN: 'contain' };
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';

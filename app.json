@@ -100,7 +100,6 @@
           "color": "#6366F1"
         }
       ],
-      "@sentry/react-native",
       "expo-image",
       "expo-localization"
     ],
