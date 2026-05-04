@@ -1,23 +1,22 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Sentry from '@sentry/react-native';
 import { t } from '../i18n';
 
 interface State {
   hasError: boolean;
+  errorMessage: string;
 }
 
 export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, errorMessage: '' };
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, errorMessage: error?.message || String(error) };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary]', error);
-    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    console.error('[ErrorBoundary]', error, errorInfo.componentStack);
   }
 
   render() {
@@ -27,9 +26,12 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
           <Ionicons name="warning-outline" size={48} color="#FF453A" />
           <Text style={styles.title}>{t('crashTitle')}</Text>
           <Text style={styles.subtitle}>{t('crashSubtitle')}</Text>
+          <ScrollView style={styles.errorBox} contentContainerStyle={styles.errorBoxContent}>
+            <Text style={styles.errorText} selectable>{this.state.errorMessage}</Text>
+          </ScrollView>
           <TouchableOpacity
             style={styles.button}
-            onPress={() => this.setState({ hasError: false })}
+            onPress={() => this.setState({ hasError: false, errorMessage: '' })}
             activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>{t('retry')}</Text>
@@ -61,6 +63,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  errorBox: {
+    maxHeight: 150,
+    width: '100%',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  errorBoxContent: {
+    padding: 12,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    fontFamily: 'Courier',
   },
   button: {
     backgroundColor: '#5B5FC7',
