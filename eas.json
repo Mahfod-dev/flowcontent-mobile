@@ -8,7 +8,9 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
+        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com"
       }
     },
     "preview": {
@@ -19,6 +21,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -33,7 +37,9 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store"
+        "EXPO_PUBLIC_API_URL": "https://flowbackendapi.store",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "323350263219-n1arqbtr8cndcqt6mn1qb4ee9q67i39g.apps.googleusercontent.com"
       }
     }
   },
