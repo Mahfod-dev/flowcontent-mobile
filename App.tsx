@@ -38,9 +38,10 @@ import { Session } from './src/types';
 import { t } from './src/i18n';
 import { ColorPalette, DRAWER_WIDTH } from './src/theme';
 
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
 Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? '',
-  enabled: !__DEV__,
+  dsn: SENTRY_DSN,
+  enabled: !__DEV__ && SENTRY_DSN.length > 0,
   tracesSampleRate: 0.2,
 });
 
