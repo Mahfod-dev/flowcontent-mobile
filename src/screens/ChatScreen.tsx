@@ -82,16 +82,8 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
     setInput((prev) => prev + (prev ? ' ' : '') + text);
   });
 
-  // Offline detection via socket events (reactive, no polling)
-  const [isOffline, setIsOffline] = useState(false);
-  useEffect(() => {
-    const offConnect = socketService.on('connect', () => setIsOffline(false));
-    const offDisconnect = socketService.on('disconnect', () => setIsOffline(true));
-    setIsOffline(!socketService.isConnected());
-    return () => { offConnect(); offDisconnect(); };
-  }, []);
 
-  const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls } = useChat(
+  const { messages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls, canRetry, retry } = useChat(
     sessionId ?? '',
     user?.id ?? ''
   );
@@ -250,13 +242,6 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Offline banner */}
-      {isOffline && (
-        <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline-outline" size={14} color={colors.warning} />
-          <Text style={styles.offlineText}>{t('connectionLost')}</Text>
-        </View>
-      )}
 
       {/* Model picker modal */}
       <Modal
@@ -368,6 +353,14 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
             {thinkingText || t('thinking')}
           </Text>
         </View>
+      )}
+
+      {/* Retry button */}
+      {canRetry && !isTyping && (
+        <TouchableOpacity style={styles.retryBar} onPress={retry} activeOpacity={0.7}>
+          <Ionicons name="refresh" size={16} color={colors.error} />
+          <Text style={styles.retryText}>{t('retry')}</Text>
+        </TouchableOpacity>
       )}
 
       {/* Attachment preview */}
@@ -526,6 +519,12 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 10,
     backgroundColor: colors.primary, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
+  retryBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: 10, backgroundColor: colors.secondary,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+  },
+  retryText: { color: colors.error, fontSize: 14, fontWeight: '600' },
   input: {
     flex: 1, backgroundColor: colors.tertiary, color: colors.text, borderRadius: radii.xxl,
     paddingHorizontal: spacing.lg, paddingVertical: 10, fontSize: 15, maxHeight: 120,
@@ -536,11 +535,6 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
   },
   micBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   micBtnActive: { backgroundColor: colors.error },
-  offlineBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    paddingVertical: 6, backgroundColor: colors.warningMuted,
-  },
-  offlineText: { color: colors.warning, fontSize: 12, fontWeight: '600' },
   sendBtn: { backgroundColor: colors.accent, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled: { backgroundColor: colors.tertiary },
   stopBtn: { backgroundColor: colors.error, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },

@@ -7,7 +7,7 @@ let currentSessionId: string | null = null;
 let currentToken: string | null = null;
 let isConnecting = false;
 let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
-const HEARTBEAT_TIMEOUT_MS = 90_000; // 90s without pong → force reconnect
+const HEARTBEAT_TIMEOUT_MS = 300_000; // 5 min without any event → force reconnect
 
 // Persistent listener registries — survive socket recreation
 const streamListeners = new Set<(event: any) => void>();

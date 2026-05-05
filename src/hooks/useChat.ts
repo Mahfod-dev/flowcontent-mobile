@@ -285,14 +285,12 @@ export function useChat(sessionId: string, userId: string) {
           setThinkingText('');
           setToolCalls([]);
           streamingIdRef.current = null;
-          const errMsg = event.error || 'Erreur';
-          const isNetErr = /network|fetch|abort|timeout|disconnect/i.test(errMsg);
-          if (!isNetErr) {
-            setMessages((prev) => [
-              ...prev,
-              { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${errMsg}`, timestamp: new Date() },
-            ]);
-          }
+          const errMsg = event.error || 'Une erreur est survenue';
+          setMessages((prev) => [
+            ...prev,
+            { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${errMsg}`, timestamp: new Date() },
+          ]);
+          setCanRetry(true);
           break;
         }
       }
@@ -330,8 +328,10 @@ export function useChat(sessionId: string, userId: string) {
         { id: `u-${Date.now()}`, role: 'user', content: displayText, timestamp: new Date(), attachments: media },
       ]);
       setIsTyping(true);
+      setCanRetry(false);
       gotStreamEventRef.current = false;
       doneProcessedRef.current = false;
+      lastUserMsgRef.current = { text, media: media ?? undefined, model };
 
       try {
         // Always read fresh token (may have been rotated by refresh-token flow)
@@ -366,15 +366,12 @@ export function useChat(sessionId: string, userId: string) {
         }, 8000);
       } catch (err: any) {
         setIsTyping(false);
-        // Suppress transient network errors (e.g. app returning from background)
         const msg = err.message || '';
-        const isNetworkError = /network|fetch|abort|timeout/i.test(msg);
-        if (!isNetworkError) {
-          setMessages((prev) => [
-            ...prev,
-            { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${msg}`, timestamp: new Date() },
-          ]);
-        }
+        setMessages((prev) => [
+          ...prev,
+          { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${msg || 'Une erreur est survenue'}`, timestamp: new Date() },
+        ]);
+        setCanRetry(true);
       }
     },
     [sessionId, stopTypewriter]
@@ -398,5 +395,30 @@ export function useChat(sessionId: string, userId: string) {
     }
   }, [sessionId, flushBuffer, stopTypewriter]);
 
-  return { messages, setMessages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls };
+  // Retry last user message
+  const lastUserMsgRef = useRef<{ text: string; media?: MediaAttachment[]; model?: string | null } | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
+
+  const retry = useCallback(() => {
+    if (!lastUserMsgRef.current) return;
+    setCanRetry(false);
+    // Remove the error message before retrying
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === 'assistant' && last.content.startsWith('⚠️')) {
+        return prev.slice(0, -1);
+      }
+      return prev;
+    });
+    const { text, media, model } = lastUserMsgRef.current;
+    // Remove the previous user message too (sendMessage will re-add it)
+    setMessages((prev) => {
+      const lastIdx = [...prev].reverse().findIndex((m) => m.role === 'user');
+      if (lastIdx >= 0) return prev.slice(0, prev.length - 1 - lastIdx).concat(prev.slice(prev.length - lastIdx));
+      return prev;
+    });
+    sendMessage(text, media ?? undefined, model);
+  }, [sendMessage]);
+
+  return { messages, setMessages, isTyping, thinkingText, sendMessage, isLoadingMessages, cancelRun, toolCalls, canRetry, retry };
 }
