@@ -17,7 +17,7 @@ import { t } from '../i18n';
 import { apiService } from '../services/api';
 import { AppNotification } from '../types';
 import { ColorPalette } from '../theme';
-import { commonStyles, notificationMarkdownTheme, radii, spacing } from '../theme';
+import { commonStyles, getNotificationMarkdownTheme, radii, spacing } from '../theme';
 import { NotificationsSkeleton } from '../components/Skeleton';
 
 function timeAgo(dateStr: string): string {
@@ -39,6 +39,7 @@ export function NotificationsScreen({ onBack }: Props) {
   const { user } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const mdTheme = useMemo(() => getNotificationMarkdownTheme(colors), [colors]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,7 +101,7 @@ export function NotificationsScreen({ onBack }: Props) {
           <Text style={styles.cardTime}>{timeAgo(item.created_at)}</Text>
         </View>
         <View style={styles.markdownWrap}>
-          <Markdown style={notificationMarkdownTheme}>{item.message}</Markdown>
+          <Markdown style={mdTheme}>{item.message}</Markdown>
         </View>
         <View style={styles.cardFooter}>
           <Text style={styles.cardCategory}>{item.category}</Text>
@@ -162,7 +163,7 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     flexDirection: 'row', backgroundColor: colors.secondary, borderRadius: radii.md, overflow: 'hidden',
     marginBottom: spacing.sm,
   },
-  cardUnread: { backgroundColor: '#1E1E1E' },
+  cardUnread: { backgroundColor: colors.tertiary },
   priorityBar: { width: 4 },
   cardContent: { flex: 1, padding: spacing.md, gap: spacing.xs },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

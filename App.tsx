@@ -18,7 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { ThemeProvider, useColors } from './src/contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { SignupScreen } from './src/screens/SignupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
@@ -51,7 +51,7 @@ function AppContent() {
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
-  const colors = useColors();
+  const { isDark, colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Check onboarding status
@@ -295,6 +295,7 @@ function AppContent() {
 
   return (
     <View style={styles.container} {...edgePanResponder.panHandlers}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {/* Main content */}
       {activeScreen === 'notifications' ? (
         <NotificationsScreen onBack={() => setActiveScreen('chat')} />
@@ -350,7 +351,6 @@ function App() {
       <ErrorBoundary>
         <ThemeProvider>
           <AuthProvider>
-            <StatusBar style="light" />
             <AppContent />
           </AuthProvider>
         </ThemeProvider>

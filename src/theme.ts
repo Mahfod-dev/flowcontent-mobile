@@ -177,6 +177,5 @@ export const commonStyles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
 
-// Backward-compat static exports (dark only)
+// Backward-compat static export (dark only)
 export const markdownTheme = getMarkdownTheme(darkColors);
-export const notificationMarkdownTheme = getNotificationMarkdownTheme(darkColors);
