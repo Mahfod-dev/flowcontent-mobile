@@ -672,7 +672,7 @@ export const apiService = {
   },
 
   async getAvailableTools(token: string): Promise<AgentTool[]> {
-    const res = await authFetch(`${API_URL}/api/fc-agent/tools`, token, undefined, false);
+    const res = await authFetch(`${API_URL}/api/fc-agent/skills/tools`, token, undefined, false);
     if (!res.ok) return [];
     const data = await safeJson(res);
     if (!data) return [];
