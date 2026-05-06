@@ -183,3 +183,34 @@ export interface MediaFile {
   created_at: string;
   url?: string;
 }
+
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  estimated_credits: number;
+  steps_count: number;
+  required_params: string[];
+  tools_whitelist: string[];
+  system_prompt?: string;
+  is_builtin: boolean;
+  enabled: boolean;
+}
+
+export interface CreateSkillParams {
+  name: string;
+  description: string;
+  category: string;
+  system_prompt: string;
+  tools_whitelist: string[];
+  estimated_credits?: number;
+  steps_count?: number;
+}
+
+export interface AgentTool {
+  name: string;
+  description: string;
+  category: string;
+  example?: string;
+}

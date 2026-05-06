@@ -41,9 +41,11 @@ const MODEL_STORAGE_KEY = 'fc_selected_model';
 interface ChatScreenProps {
   sessionId: string | null;
   onOpenDrawer: () => void;
+  pendingMessage?: string | null;
+  onPendingMessageSent?: () => void;
 }
 
-export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
+export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingMessageSent }: ChatScreenProps) {
   const { user } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -116,6 +118,16 @@ export function ChatScreen({ sessionId, onOpenDrawer }: ChatScreenProps) {
       if (scrollTimer.current) { clearTimeout(scrollTimer.current); scrollTimer.current = null; }
     };
   }, []);
+
+  // Auto-send pending message (from Skills screen)
+  const pendingSentRef = useRef(false);
+  useEffect(() => {
+    if (!pendingMessage || pendingSentRef.current || isLoadingMessages) return;
+    pendingSentRef.current = true;
+    sendMessage(pendingMessage, undefined, selectedModel.value).then(() => {
+      onPendingMessageSent?.();
+    });
+  }, [pendingMessage, isLoadingMessages]);
 
   const handleSend = async () => {
     if (!input.trim() && attachments.length === 0) return;

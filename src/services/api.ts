@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaFile, NangoConnection, NangoProvider, Session, SubscriptionPlan } from '../types';
+import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaFile, NangoConnection, NangoProvider, Session, Skill, SubscriptionPlan } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
@@ -648,6 +648,45 @@ export const apiService = {
       body: JSON.stringify({ expoPushToken }),
     }, false);
     return res.ok;
+  },
+
+  // Skills (Pipelines IA)
+  async getSkills(token: string): Promise<Skill[]> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/skills`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.skills ?? data ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  async createSkill(token: string, params: CreateSkillParams): Promise<Skill | null> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/skills`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }, false);
+    if (!res.ok) return null;
+    const data = await safeJson(res);
+    return data?.data ?? data;
+  },
+
+  async getAvailableTools(token: string): Promise<AgentTool[]> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/tools`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    if (!data) return [];
+    const list = data.data ?? data.tools ?? data ?? [];
+    if (!Array.isArray(list)) return [];
+    return list.map((t: any) => {
+      if (typeof t === 'string') return { name: t, description: '', category: 'general' };
+      return {
+        name: t.name ?? t.function?.name ?? t.id ?? '',
+        description: t.description ?? t.function?.description ?? '',
+        category: t.category ?? 'general',
+        example: t.example,
+      };
+    }).filter((t: AgentTool) => !!t.name);
   },
 
   async submitFeedback(token: string, sessionId: string, messageIndex: number, rating: 'up' | 'down'): Promise<boolean> {

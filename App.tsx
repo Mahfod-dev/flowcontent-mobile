@@ -28,6 +28,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { UpgradeScreen } from './src/screens/UpgradeScreen';
 import { MediaScreen } from './src/screens/MediaScreen';
+import { SkillsScreen } from './src/screens/SkillsScreen';
 import { Sidebar } from './src/components/Sidebar';
 import { useBiometric } from './src/hooks/useBiometric';
 import { useDeepLink } from './src/hooks/useDeepLink';
@@ -43,7 +44,8 @@ function AppContent() {
   const { user, isLoading, logout } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media'>('chat');
+  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media' | 'skills'>('chat');
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const [biometricLocked, setBiometricLocked] = useState(false);
@@ -234,6 +236,20 @@ function AppContent() {
     [closeDrawer]
   );
 
+  const handleLaunchSkill = useCallback(async (skillId: string, params: Record<string, string>) => {
+    if (!user?.token) return;
+    try {
+      const result = await apiService.getOrCreateSession(user.token);
+      const paramsStr = Object.entries(params).map(([k, v]) => `${k}: ${v}`).join(', ');
+      const message = `Lance le skill ${skillId}. Parametres: ${paramsStr}`;
+      setPendingMessage(message);
+      setSessionId(result.sessionId);
+      setActiveScreen('chat');
+    } catch (e) {
+      console.error('Failed to launch skill', e);
+    }
+  }, [user?.token]);
+
   const creatingSessionRef = useRef(false);
   const handleNewChat = useCallback(async () => {
     if (!user?.token || creatingSessionRef.current) return;
@@ -307,11 +323,23 @@ function AppContent() {
         <UpgradeScreen onBack={() => setActiveScreen('chat')} />
       ) : activeScreen === 'media' ? (
         <MediaScreen onBack={() => setActiveScreen('chat')} />
+      ) : activeScreen === 'skills' ? (
+        <SkillsScreen
+          onBack={() => setActiveScreen('chat')}
+          onLaunchSkill={handleLaunchSkill}
+          onUseTool={(prompt) => {
+            setPendingMessage(prompt);
+            setActiveScreen('chat');
+          }}
+          activeDomain={apiService.getActiveSiteDomain()}
+        />
       ) : (
         <ChatScreen
           key={sessionId}
           sessionId={sessionId}
           onOpenDrawer={openDrawer}
+          pendingMessage={pendingMessage}
+          onPendingMessageSent={() => setPendingMessage(null)}
         />
       )}
 
@@ -339,6 +367,7 @@ function AppContent() {
           onOpenDashboard={() => { closeDrawer(); setActiveScreen('dashboard'); }}
           onOpenUpgrade={() => { closeDrawer(); setActiveScreen('upgrade'); }}
           onOpenMedia={() => { closeDrawer(); setActiveScreen('media'); }}
+          onOpenSkills={() => { closeDrawer(); setActiveScreen('skills'); }}
         />
       </Animated.View>
     </View>

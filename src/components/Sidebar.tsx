@@ -37,6 +37,7 @@ interface SidebarProps {
   onOpenDashboard?: () => void;
   onOpenUpgrade?: () => void;
   onOpenMedia?: () => void;
+  onOpenSkills?: () => void;
 }
 
 function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelete: () => void; onPin: () => void; isPinned: boolean; children: React.ReactNode; colors: ColorPalette }) {
@@ -104,7 +105,7 @@ function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelet
   );
 }
 
-export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile, onOpenDashboard, onOpenUpgrade, onOpenMedia }: SidebarProps) {
+export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile, onOpenDashboard, onOpenUpgrade, onOpenMedia, onOpenSkills }: SidebarProps) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const colors = useColors();
@@ -414,6 +415,12 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenUpgrade} activeOpacity={0.7}>
               <Ionicons name="diamond-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('subscription')}</Text>
+            </TouchableOpacity>
+          )}
+          {onOpenSkills && (
+            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenSkills} activeOpacity={0.7}>
+              <Ionicons name="rocket-outline" size={20} color={colors.textTertiary} />
+              <Text style={styles.footerActionLabel}>{t('pipelines')}</Text>
             </TouchableOpacity>
           )}
           {onOpenMedia && (
