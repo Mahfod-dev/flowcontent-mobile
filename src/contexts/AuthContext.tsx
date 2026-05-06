@@ -59,11 +59,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [logout]);
 
   // Token refresh callback — update user state + reconnect socket with new JWT
+  // FIX: Don't disconnect/reconnect immediately — update auth token in place
+  // to avoid killing active streams. Socket.io will use new token on next reconnect.
   useEffect(() => {
     apiService.setOnTokenRefreshed((newToken: string) => {
+      // FIX: Update socket FIRST (before React re-render) to avoid auth window
+      if (socketService.isConnected()) {
+        (socketService as any)._updateToken?.(newToken);
+      } else {
+        socketService.connect(newToken);
+      }
+      // Then update React state
       setUser((prev) => prev ? { ...prev, token: newToken } : prev);
-      socketService.disconnect();
-      socketService.connect(newToken);
     });
     return () => apiService.setOnTokenRefreshed(null);
   }, []);
@@ -123,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (wasDisconnected) {
           socketService.connect(user.token);
         }
-        // Always re-join current session room (may have been lost during background)
+        // FIX BUG #9: Use async rejoin with retry — handles reconnection delay
         socketService.rejoinCurrentSession();
       }
     });

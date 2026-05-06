@@ -17,6 +17,7 @@
       "bundleIdentifier": "com.flowcontent.app",
       "buildNumber": "2",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "FlowContent utilise le micro pour la saisie vocale.",
         "NSSpeechRecognitionUsageDescription": "FlowContent utilise la reconnaissance vocale pour transcrire vos messages.",
         "NSPhotoLibraryUsageDescription": "FlowContent accède à vos photos pour les joindre aux messages.",
