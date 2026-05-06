@@ -41,7 +41,7 @@ import { ColorPalette, DRAWER_WIDTH } from './src/theme';
 const ONBOARDING_DONE_KEY = 'fc_onboarding_done';
 
 function AppContent() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, logout, login } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media' | 'skills'>('chat');
@@ -50,7 +50,8 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const [biometricLocked, setBiometricLocked] = useState(false);
   const [activeMode, setActiveMode] = useState<{ id: string; name: string } | null>(null);
-  const { isEnabled: biometricEnabled, authenticate } = useBiometric();
+  const { isEnabled: biometricEnabled, hasSavedCredentials, authenticate, getSavedCredentials, saveCredentials, clearCredentials } = useBiometric();
+  const [biometricAutoLogin, setBiometricAutoLogin] = useState(false);
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
@@ -64,7 +65,7 @@ function AppContent() {
     });
   }, []);
 
-  // Biometric lock on app start
+  // Biometric lock on app start (when session is still active)
   useEffect(() => {
     if (user && biometricEnabled) {
       setBiometricLocked(true);
@@ -73,6 +74,33 @@ function AppContent() {
       });
     }
   }, [user?.id]); // only on initial mount per user
+
+  // Biometric auto-login: when no session but saved credentials exist
+  const biometricAutoLoginAttempted = useRef(false);
+  useEffect(() => {
+    if (user || isLoading || biometricAutoLoginAttempted.current) return;
+    if (!biometricEnabled || !hasSavedCredentials) return;
+    biometricAutoLoginAttempted.current = true;
+    setBiometricAutoLogin(true);
+    authenticate().then(async (ok) => {
+      if (!ok) {
+        setBiometricAutoLogin(false);
+        return;
+      }
+      const creds = await getSavedCredentials();
+      if (!creds) {
+        setBiometricAutoLogin(false);
+        return;
+      }
+      try {
+        await login(creds.email, creds.password);
+      } catch {
+        // Credentials may have changed — clear saved ones
+        clearCredentials();
+      }
+      setBiometricAutoLogin(false);
+    });
+  }, [user, isLoading, biometricEnabled, hasSavedCredentials]);
 
   // Init push notifications
   const pushTokenRef = useRef<string | null>(null);
@@ -298,9 +326,24 @@ function AppContent() {
   }
 
   if (!user) {
+    // Show loading while biometric auto-login is in progress
+    if (biometricAutoLogin) {
+      return (
+        <View style={styles.lockScreen}>
+          <View style={styles.lockContent}>
+            <Ionicons name="finger-print" size={48} color={colors.accent} />
+            <Text style={styles.lockTitle}>FlowContent</Text>
+            <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 16 }} />
+          </View>
+        </View>
+      );
+    }
     return authScreen === 'signup'
       ? <SignupScreen onSwitchToLogin={() => setAuthScreen('login')} />
-      : <LoginScreen onSwitchToSignup={() => setAuthScreen('signup')} />;
+      : <LoginScreen
+          onSwitchToSignup={() => setAuthScreen('signup')}
+          onLoginSuccess={biometricEnabled ? saveCredentials : undefined}
+        />;
   }
 
   // Biometric lock screen

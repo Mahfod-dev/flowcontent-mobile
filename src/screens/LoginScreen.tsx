@@ -25,9 +25,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 interface Props {
   onSwitchToSignup?: () => void;
+  onLoginSuccess?: (email: string, password: string) => void;
 }
 
-export function LoginScreen({ onSwitchToSignup }: Props) {
+export function LoginScreen({ onSwitchToSignup, onLoginSuccess }: Props) {
   const { login, loginWithGoogleCode } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -80,7 +81,10 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
     setLoading(true);
     setError('');
     try {
-      await login(email.trim().toLowerCase(), password);
+      const trimmedEmail = email.trim().toLowerCase();
+      await login(trimmedEmail, password);
+      // Save credentials for biometric auto-login
+      onLoginSuccess?.(trimmedEmail, password);
     } catch (err: any) {
       setError(err.message || 'Connexion échouée');
     } finally {

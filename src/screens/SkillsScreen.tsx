@@ -3,7 +3,9 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -135,6 +137,10 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
   const [toolCategory, setToolCategory] = useState<string>('all');
   const [toolSearch, setToolSearch] = useState('');
 
+  // Tool prompt edit modal
+  const [toolPromptDraft, setToolPromptDraft] = useState('');
+  const [toolPromptTool, setToolPromptTool] = useState<AgentTool | null>(null);
+
   // --- Modes state ---
   const [modes, setModes] = useState<any[]>([]);
   const [modesLoading, setModesLoading] = useState(false);
@@ -180,17 +186,24 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
       const creds = await apiService.getCredits(user.token);
       setCredits(creds);
       if (creds && creds.total_available < detailSkill.estimated_credits) {
+        // Not enough credits — show insufficient modal
         setDetailSkill(null);
         setTimeout(() => {
           setConfirmSkill({ ...detailSkill, estimated_credits: -1 } as Skill);
         }, 100);
         return;
       }
-      setConfirmSkill(detailSkill);
+      // Enough credits — launch directly without confirm step
+      const params: Record<string, string> = {};
+      if (paramDomain) params.domain = paramDomain;
+      if (paramTopic) params.topic = paramTopic;
+      if (paramLanguage) params.language = paramLanguage;
+      setDetailSkill(null);
+      onLaunchSkill(detailSkill.id, params);
     } catch {} finally {
       setCreditsLoading(false);
     }
-  }, [detailSkill, user?.token]);
+  }, [detailSkill, user?.token, paramDomain, paramTopic, paramLanguage, onLaunchSkill]);
 
   const handleConfirmLaunch = useCallback(() => {
     if (!confirmSkill) return;
@@ -317,13 +330,25 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
     </TouchableOpacity>
   );
 
+  const openToolPrompt = useCallback((tool: AgentTool) => {
+    setToolPromptTool(tool);
+    setToolPromptDraft(getToolPrompt(tool));
+  }, []);
+
+  const handleSendToolPrompt = useCallback(() => {
+    if (!toolPromptDraft.trim()) return;
+    onUseTool(toolPromptDraft.trim());
+    setToolPromptTool(null);
+    setToolPromptDraft('');
+  }, [toolPromptDraft, onUseTool]);
+
   const renderToolCard = ({ item }: { item: AgentTool }) => {
     const humanName = item.name.replace(/_/g, ' ').replace(/^mcp /, '');
     const desc = item.description?.split('\n')[0]?.slice(0, 100) || '';
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => onUseTool(getToolPrompt(item))}
+        onPress={() => openToolPrompt(item)}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
@@ -339,7 +364,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
           <Text style={styles.toolExample} numberOfLines={1}>{getToolPrompt(item)}</Text>
           <TouchableOpacity
             style={styles.launchBtn}
-            onPress={() => onUseTool(getToolPrompt(item))}
+            onPress={() => openToolPrompt(item)}
             activeOpacity={0.7}
           >
             <Text style={styles.launchBtnText}>{t('toolUse')}</Text>
@@ -565,8 +590,8 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
 
       {/* Detail Modal (Pipeline) */}
       <Modal visible={!!detailSkill} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{detailSkill?.name.replace(/_/g, ' ')}</Text>
@@ -644,7 +669,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Confirm Modal */}
@@ -686,8 +711,8 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
 
       {/* Create Skill Modal */}
       <Modal visible={showCreate} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{t('skillCreateTitle')}</Text>
@@ -806,7 +831,43 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Tool Prompt Edit Modal */}
+      <Modal visible={!!toolPromptTool} transparent animationType="fade">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.toolPromptModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {toolPromptTool?.name.replace(/_/g, ' ').replace(/^mcp /, '')}
+              </Text>
+              <TouchableOpacity onPress={() => setToolPromptTool(null)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.toolPromptHint}>{t('toolPromptHint')}</Text>
+            <TextInput
+              style={[styles.formInput, styles.toolPromptInput]}
+              value={toolPromptDraft}
+              onChangeText={setToolPromptDraft}
+              placeholder={t('toolPromptPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              autoFocus
+              textAlignVertical="top"
+            />
+            <TouchableOpacity
+              style={[styles.modalLaunchBtn, { flexDirection: 'row', justifyContent: 'center', gap: 8 }, !toolPromptDraft.trim() && styles.modalLaunchDisabled]}
+              onPress={handleSendToolPrompt}
+              disabled={!toolPromptDraft.trim()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="send" size={16} color={colors.white} />
+              <Text style={styles.modalLaunchText}>{t('toolSend')}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -883,7 +944,7 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
   },
   // Chips
   chipsScroll: {
-    maxHeight: 44,
+    maxHeight: 52,
   },
   chipsContainer: {
     paddingHorizontal: spacing.lg,
@@ -891,8 +952,8 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: radii.full,
     backgroundColor: colors.secondary,
     borderWidth: 1,
@@ -904,12 +965,12 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
   },
   chipText: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
   },
   chipTextActive: {
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   // Tools search
   toolSearchContainer: {
@@ -1204,5 +1265,25 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     marginTop: spacing.md,
+  },
+  // Tool prompt edit modal
+  toolPromptModal: {
+    backgroundColor: colors.secondary,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 'auto' as any,
+  },
+  toolPromptHint: {
+    color: colors.textTertiary,
+    fontSize: 13,
+    marginBottom: spacing.sm,
+  },
+  toolPromptInput: {
+    minHeight: 100,
+    maxHeight: 200,
+    textAlignVertical: 'top',
   },
 });

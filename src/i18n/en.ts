@@ -274,6 +274,9 @@ export default {
   toolCatOther: 'Other',
   toolSearchPlaceholder: 'Search a tool...',
   toolPromptPrefix: 'Use the tool',
+  toolPromptHint: 'Customize your request before sending',
+  toolPromptPlaceholder: 'Describe what you want to do...',
+  toolSend: 'Send',
 
   // Updates
   updateAvailable: 'Update available',
