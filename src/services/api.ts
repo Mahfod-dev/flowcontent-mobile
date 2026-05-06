@@ -661,7 +661,7 @@ export const apiService = {
   },
 
   async createSkill(token: string, params: CreateSkillParams): Promise<Skill | null> {
-    const res = await authFetch(`${API_URL}/api/fc-agent/skills`, token, {
+    const res = await authFetch(`${API_URL}/api/fc-agent/pipelines`, token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
