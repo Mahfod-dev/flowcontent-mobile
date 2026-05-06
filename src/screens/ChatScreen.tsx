@@ -43,9 +43,10 @@ interface ChatScreenProps {
   onOpenDrawer: () => void;
   pendingMessage?: string | null;
   onPendingMessageSent?: () => void;
+  activeMode?: { id: string; name: string } | null;
 }
 
-export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingMessageSent }: ChatScreenProps) {
+export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingMessageSent, activeMode }: ChatScreenProps) {
   const { user } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -244,6 +245,20 @@ export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingM
           <Ionicons name="flash" size={16} color={colors.accent} />
           <Text style={styles.headerTitle}> Flow</Text>
         </View>
+        {activeMode && (
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.accent + '20',
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 10,
+            gap: 4,
+          }}>
+            <Ionicons name="flash" size={12} color={colors.accent} />
+            <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '600' }}>{activeMode.name}</Text>
+          </View>
+        )}
         <TouchableOpacity
           style={styles.modelBtn}
           onPress={() => setModelModalVisible(true)}

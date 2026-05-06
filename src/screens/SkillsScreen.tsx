@@ -107,7 +107,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
   const { skills, loading, reload } = useSkills();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'pipelines' | 'tools'>('pipelines');
+  const [activeTab, setActiveTab] = useState<'pipelines' | 'tools' | 'modes'>('pipelines');
 
   // --- Pipelines state ---
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -135,6 +135,11 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
   const [toolCategory, setToolCategory] = useState<string>('all');
   const [toolSearch, setToolSearch] = useState('');
 
+  // --- Modes state ---
+  const [modes, setModes] = useState<any[]>([]);
+  const [modesLoading, setModesLoading] = useState(false);
+  const [activatingMode, setActivatingMode] = useState<string | null>(null);
+
   // Load tools on first tab switch
   useEffect(() => {
     if (activeTab === 'tools' && tools.length === 0 && user?.token) {
@@ -142,6 +147,16 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
       apiService.getAvailableTools(user.token).then((data) => {
         setTools(data);
       }).catch(() => {}).finally(() => setToolsLoading(false));
+    }
+  }, [activeTab, user?.token]);
+
+  // Load modes on first tab switch
+  useEffect(() => {
+    if (activeTab === 'modes' && modes.length === 0 && user?.token) {
+      setModesLoading(true);
+      apiService.getMarketplaceSkills(user.token).then((data) => {
+        setModes(data);
+      }).catch(() => {}).finally(() => setModesLoading(false));
     }
   }, [activeTab, user?.token]);
 
@@ -187,6 +202,30 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
     setConfirmSkill(null);
     onLaunchSkill(confirmSkill.id, params);
   }, [confirmSkill, paramDomain, paramTopic, paramLanguage, onLaunchSkill]);
+
+  const handleToggleMode = useCallback(async (mode: any) => {
+    if (!user?.token) return;
+    setActivatingMode(mode.id);
+    try {
+      if (mode.isActivated) {
+        await apiService.deactivateMode(user.token, mode.id);
+        setModes(prev => prev.map(m => m.id === mode.id ? { ...m, isActivated: false } : m));
+        Alert.alert(t('modeDeactivated'));
+      } else {
+        const result = await apiService.activateMode(user.token, mode.id);
+        if (result.success) {
+          setModes(prev => prev.map(m => m.id === mode.id ? { ...m, isActivated: true } : m));
+          Alert.alert(t('modeActivated'), result.welcomeMessage || '');
+        } else {
+          Alert.alert(t('modeNeedUpgrade'));
+        }
+      }
+    } catch {
+      Alert.alert(t('error'));
+    } finally {
+      setActivatingMode(null);
+    }
+  }, [user?.token]);
 
   const handleCreateSkill = useCallback(async () => {
     if (!user?.token || !createName.trim() || !createDesc.trim() || !createPrompt.trim()) return;
@@ -326,7 +365,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
         )}
         <View style={styles.headerBadge}>
           <Text style={styles.headerBadgeText}>
-            {activeTab === 'pipelines' ? skills.length : tools.length}
+            {activeTab === 'pipelines' ? skills.length : activeTab === 'tools' ? tools.length : modes.length}
           </Text>
         </View>
       </View>
@@ -351,6 +390,16 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
           <Ionicons name="construct-outline" size={16} color={activeTab === 'tools' ? colors.accent : colors.textTertiary} />
           <Text style={[styles.tabText, activeTab === 'tools' && styles.tabTextActive]}>
             {t('tabTools')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'modes' && styles.tabActive]}
+          onPress={() => setActiveTab('modes')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="color-wand-outline" size={16} color={activeTab === 'modes' ? colors.accent : colors.textTertiary} />
+          <Text style={[styles.tabText, activeTab === 'modes' && styles.tabTextActive]}>
+            {t('tabModes')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -393,7 +442,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
             />
           )}
         </>
-      ) : (
+      ) : activeTab === 'tools' ? (
         <>
           {/* Tools search */}
           <View style={styles.toolSearchContainer}>
@@ -445,6 +494,68 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
               initialNumToRender={20}
               maxToRenderPerBatch={15}
               ListEmptyComponent={<Text style={styles.emptyText}>{t('noData')}</Text>}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          {/* Modes content */}
+          {modesLoading ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : (
+            <FlatList
+              data={modes}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.list}
+              renderItem={({ item: mode }) => (
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Text style={styles.cardName}>{mode.name}</Text>
+                        {mode.isActivated && (
+                          <View style={[styles.chipActive, { paddingHorizontal: 6, paddingVertical: 2 }]}>
+                            <Text style={{ color: colors.accent, fontSize: 10, fontWeight: '700' }}>{t('modeActive')}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <Text style={[styles.chipText, { fontSize: 10 }]}>
+                          {(mode.tier || 'pro').toUpperCase()}
+                        </Text>
+                        <Text style={[styles.chipText, { fontSize: 10 }]}>
+                          ~{mode.estimatedCredits || 5} cr/session
+                        </Text>
+                      </View>
+                      <Text style={styles.cardDesc} numberOfLines={3}>{mode.description}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.launchBtn, mode.isActivated && { backgroundColor: colors.textTertiary }]}
+                    onPress={() => handleToggleMode(mode)}
+                    activeOpacity={0.7}
+                    disabled={activatingMode === mode.id}
+                  >
+                    {activatingMode === mode.id ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name={mode.isActivated ? 'close-circle-outline' : 'flash-outline'} size={16} color={colors.white} />
+                        <Text style={styles.launchBtnText}>
+                          {mode.isActivated ? t('modeDeactivate') : t('modeActivate')}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+              ListEmptyComponent={
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Text style={styles.emptyText}>{t('noData')}</Text>
+                </View>
+              }
             />
           )}
         </>

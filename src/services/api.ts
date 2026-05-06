@@ -689,6 +689,38 @@ export const apiService = {
     }).filter((t: AgentTool) => !!t.name);
   },
 
+  async getMarketplaceSkills(token: string): Promise<any[]> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/marketplace`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    return data?.skills ?? data?.data ?? [];
+  },
+
+  async activateMode(token: string, skillId: string): Promise<{ success: boolean; welcomeMessage?: string }> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/marketplace/${skillId}/activate`, token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    }, false);
+    const data = await safeJson(res);
+    return data ?? { success: false };
+  },
+
+  async deactivateMode(token: string, skillId: string): Promise<{ success: boolean }> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/marketplace/${skillId}/activate`, token, {
+      method: 'DELETE',
+    }, false);
+    const data = await safeJson(res);
+    return data ?? { success: false };
+  },
+
+  async getActiveModes(token: string): Promise<any[]> {
+    const res = await authFetch(`${API_URL}/api/fc-agent/marketplace/user/me/skills`, token, undefined, false);
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    return data?.skills ?? data?.data ?? [];
+  },
+
   async submitFeedback(token: string, sessionId: string, messageIndex: number, rating: 'up' | 'down'): Promise<boolean> {
     const res = await authFetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/feedback`, token, {
       method: 'POST',

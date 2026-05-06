@@ -49,6 +49,7 @@ function AppContent() {
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const [biometricLocked, setBiometricLocked] = useState(false);
+  const [activeMode, setActiveMode] = useState<{ id: string; name: string } | null>(null);
   const { isEnabled: biometricEnabled, authenticate } = useBiometric();
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -86,6 +87,19 @@ function AppContent() {
     });
     const sub = notificationService.addTapListener();
     return () => sub.remove();
+  }, [user?.token]);
+
+  // Fetch active mode
+  useEffect(() => {
+    if (!user?.token) return;
+    apiService.getActiveModes(user.token).then((modes) => {
+      const active = modes.find((m: any) => m.activation?.isActive || m.isActivated);
+      if (active) {
+        setActiveMode({ id: active.id, name: active.name });
+      } else {
+        setActiveMode(null);
+      }
+    }).catch(() => {});
   }, [user?.token]);
 
   // Deep linking — flowcontent://chat/123, flowcontent://dashboard, etc.
@@ -340,6 +354,7 @@ function AppContent() {
           onOpenDrawer={openDrawer}
           pendingMessage={pendingMessage}
           onPendingMessageSent={() => setPendingMessage(null)}
+          activeMode={activeMode}
         />
       )}
 
