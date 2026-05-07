@@ -69,6 +69,43 @@ function normalizeToolCategory(cat: string): string {
   return map[cat?.toLowerCase()] || 'other';
 }
 
+// French translations for tool descriptions (user-facing)
+const TOOL_DESC_FR: Record<string, string> = {
+  search_web: 'Recherche sur le web en temps reel',
+  analyze_website: 'Analyse technique et SEO d\'un site web',
+  generate_content: 'Generation de contenu (articles, posts, emails)',
+  generate_video: 'Creation de videos IA',
+  execute_code: 'Execution de code JavaScript/Python en sandbox',
+  browse_web: 'Navigation web et extraction de contenu',
+  deep_research: 'Recherche approfondie multi-sources',
+  dispatch_task: 'Delegation de taches a des agents specialises',
+  keyword_research: 'Recherche de mots-cles SEO avec volumes',
+  generate_pptx: 'Creation de presentations PowerPoint',
+  generate_xlsx: 'Creation de tableurs Excel',
+  generate_docx: 'Creation de documents Word',
+  backend_api: 'Appel aux APIs FlowContent',
+  nango_proxy: 'Acces aux integrations OAuth (Google, Meta...)',
+  youtube_manager: 'Gestion de chaine YouTube',
+  pinterest_manager: 'Gestion de compte Pinterest',
+  analyze_ga4: 'Analyse Google Analytics 4',
+  orchestrate: 'Orchestration multi-agents en parallele',
+  run_skill: 'Execution de pipelines multi-etapes',
+  spawn_worker: 'Lancement d\'agents en arriere-plan',
+  async_task: 'Taches asynchrones avec suivi',
+  generate_image: 'Generation d\'images IA',
+  send_email: 'Envoi d\'emails',
+  manage_calendar: 'Gestion d\'agenda Google Calendar',
+  social_post: 'Publication sur les reseaux sociaux',
+  get_user_context: 'Recuperation du contexte utilisateur',
+  generate_youtube_video: 'Creation de videos YouTube',
+  stripe_manager: 'Gestion des paiements Stripe',
+  shopify_manager: 'Gestion boutique Shopify',
+  notion_manager: 'Gestion de pages Notion',
+  google_sheets: 'Lecture/ecriture Google Sheets',
+  google_docs: 'Creation de documents Google Docs',
+  google_drive: 'Gestion de fichiers Google Drive',
+};
+
 // Generate a human-readable prompt for a tool
 function getToolPrompt(tool: AgentTool): string {
   const name = tool.name.replace(/_/g, ' ');
@@ -146,12 +183,18 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
   const [modesLoading, setModesLoading] = useState(false);
   const [activatingMode, setActivatingMode] = useState<string | null>(null);
 
-  // Load tools on first tab switch
+  // Load tools on first tab switch (deduplicate by name)
   useEffect(() => {
     if (activeTab === 'tools' && tools.length === 0 && user?.token) {
       setToolsLoading(true);
       apiService.getAvailableTools(user.token).then((data) => {
-        setTools(data);
+        const seen = new Set<string>();
+        const unique = data.filter((t) => {
+          if (seen.has(t.name)) return false;
+          seen.add(t.name);
+          return true;
+        });
+        setTools(unique);
       }).catch(() => {}).finally(() => setToolsLoading(false));
     }
   }, [activeTab, user?.token]);
@@ -344,7 +387,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
 
   const renderToolCard = ({ item }: { item: AgentTool }) => {
     const humanName = item.name.replace(/_/g, ' ').replace(/^mcp /, '');
-    const desc = item.description?.split('\n')[0]?.slice(0, 100) || '';
+    const desc = TOOL_DESC_FR[item.name] || item.description?.split('\n')[0]?.slice(0, 100) || '';
     return (
       <TouchableOpacity
         style={styles.card}
@@ -402,7 +445,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
           onPress={() => setActiveTab('pipelines')}
           activeOpacity={0.7}
         >
-          <Ionicons name="rocket-outline" size={16} color={activeTab === 'pipelines' ? colors.accent : colors.textTertiary} />
+          <Ionicons name="rocket-outline" size={16} color={activeTab === 'pipelines' ? colors.white : colors.textSecondary} />
           <Text style={[styles.tabText, activeTab === 'pipelines' && styles.tabTextActive]}>
             {t('tabPipelines')}
           </Text>
@@ -412,7 +455,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
           onPress={() => setActiveTab('tools')}
           activeOpacity={0.7}
         >
-          <Ionicons name="construct-outline" size={16} color={activeTab === 'tools' ? colors.accent : colors.textTertiary} />
+          <Ionicons name="construct-outline" size={16} color={activeTab === 'tools' ? colors.white : colors.textSecondary} />
           <Text style={[styles.tabText, activeTab === 'tools' && styles.tabTextActive]}>
             {t('tabTools')}
           </Text>
@@ -422,7 +465,7 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
           onPress={() => setActiveTab('modes')}
           activeOpacity={0.7}
         >
-          <Ionicons name="color-wand-outline" size={16} color={activeTab === 'modes' ? colors.accent : colors.textTertiary} />
+          <Ionicons name="color-wand-outline" size={16} color={activeTab === 'modes' ? colors.white : colors.textSecondary} />
           <Text style={[styles.tabText, activeTab === 'modes' && styles.tabTextActive]}>
             {t('tabModes')}
           </Text>
@@ -431,27 +474,28 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
 
       {/* Content based on active tab */}
       {activeTab === 'pipelines' ? (
-        <>
+        <View style={styles.tabContent}>
           {/* Category chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsContainer}
-            style={styles.chipsScroll}
-          >
-            {SKILL_CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.key}
-                style={[styles.chip, selectedCategory === cat.key && styles.chipActive]}
-                onPress={() => setSelectedCategory(cat.key)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, selectedCategory === cat.key && styles.chipTextActive]}>
-                  {t(cat.label as any)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.chipsWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsContainer}
+            >
+              {SKILL_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[styles.chip, selectedCategory === cat.key && styles.chipActive]}
+                  onPress={() => setSelectedCategory(cat.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.chipText, selectedCategory === cat.key && styles.chipTextActive]}>
+                    {t(cat.label as any)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -466,9 +510,9 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
               ListEmptyComponent={<Text style={styles.emptyText}>{t('noData')}</Text>}
             />
           )}
-        </>
+        </View>
       ) : activeTab === 'tools' ? (
-        <>
+        <View style={styles.tabContent}>
           {/* Tools search */}
           <View style={styles.toolSearchContainer}>
             <Ionicons name="search-outline" size={16} color={colors.textTertiary} />
@@ -486,25 +530,26 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
           </View>
 
           {/* Tool category chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsContainer}
-            style={styles.chipsScroll}
-          >
-            {TOOL_CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.key}
-                style={[styles.chip, toolCategory === cat.key && styles.chipActive]}
-                onPress={() => setToolCategory(cat.key)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, toolCategory === cat.key && styles.chipTextActive]}>
-                  {t(cat.label as any)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.chipsWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsContainer}
+            >
+              {TOOL_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[styles.chip, toolCategory === cat.key && styles.chipActive]}
+                  onPress={() => setToolCategory(cat.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.chipText, toolCategory === cat.key && styles.chipTextActive]}>
+                    {t(cat.label as any)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
           {toolsLoading ? (
             <View style={styles.loadingContainer}>
@@ -521,12 +566,12 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
               ListEmptyComponent={<Text style={styles.emptyText}>{t('noData')}</Text>}
             />
           )}
-        </>
+        </View>
       ) : (
-        <>
+        <View style={styles.tabContent}>
           {/* Modes content */}
           {modesLoading ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={styles.loadingContainer}>
               <ActivityIndicator color={colors.accent} />
             </View>
           ) : (
@@ -537,53 +582,49 @@ export function SkillsScreen({ onBack, onLaunchSkill, onUseTool, activeDomain }:
               renderItem={({ item: mode }) => (
                 <View style={styles.card}>
                   <View style={styles.cardHeader}>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                        <Text style={styles.cardName}>{mode.name}</Text>
-                        {mode.isActivated && (
-                          <View style={[styles.chipActive, { paddingHorizontal: 6, paddingVertical: 2 }]}>
-                            <Text style={{ color: colors.accent, fontSize: 10, fontWeight: '700' }}>{t('modeActive')}</Text>
-                          </View>
-                        )}
+                    <Text style={styles.cardName} numberOfLines={1}>{mode.name}</Text>
+                    {mode.isActivated ? (
+                      <View style={styles.modeActiveBadge}>
+                        <Text style={styles.modeActiveBadgeText}>{t('modeActive')}</Text>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <Text style={[styles.chipText, { fontSize: 10 }]}>
-                          {(mode.tier || 'pro').toUpperCase()}
-                        </Text>
-                        <Text style={[styles.chipText, { fontSize: 10 }]}>
-                          ~{mode.estimatedCredits || 5} cr/session
-                        </Text>
-                      </View>
-                      <Text style={styles.cardDesc} numberOfLines={3}>{mode.description}</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.launchBtn, mode.isActivated && { backgroundColor: colors.textTertiary }]}
-                    onPress={() => handleToggleMode(mode)}
-                    activeOpacity={0.7}
-                    disabled={activatingMode === mode.id}
-                  >
-                    {activatingMode === mode.id ? (
-                      <ActivityIndicator color={colors.white} size="small" />
                     ) : (
-                      <>
-                        <Ionicons name={mode.isActivated ? 'close-circle-outline' : 'flash-outline'} size={16} color={colors.white} />
-                        <Text style={styles.launchBtnText}>
-                          {mode.isActivated ? t('modeDeactivate') : t('modeActivate')}
-                        </Text>
-                      </>
+                      <View style={styles.cardBadge}>
+                        <Text style={styles.cardBadgeText}>{(mode.tier || 'pro').toUpperCase()}</Text>
+                      </View>
                     )}
-                  </TouchableOpacity>
+                  </View>
+                  <Text style={styles.cardDesc} numberOfLines={3}>{mode.description}</Text>
+                  <View style={styles.cardFooter}>
+                    <View style={styles.cardMeta}>
+                      <Text style={styles.cardSteps}>~{mode.estimatedCredits || 5} {t('skillCredits')}/session</Text>
+                      {mode.preferredModel && (
+                        <Text style={styles.cardTools}>{mode.preferredModel}</Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.launchBtn, mode.isActivated && styles.modeDeactivateBtn]}
+                      onPress={() => handleToggleMode(mode)}
+                      activeOpacity={0.7}
+                      disabled={activatingMode === mode.id}
+                    >
+                      {activatingMode === mode.id ? (
+                        <ActivityIndicator color={colors.white} size="small" />
+                      ) : (
+                        <>
+                          <Ionicons name={mode.isActivated ? 'close-circle-outline' : 'flash-outline'} size={16} color={colors.white} />
+                          <Text style={styles.launchBtnText}>
+                            {mode.isActivated ? t('modeDeactivate') : t('modeActivate')}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
-              ListEmptyComponent={
-                <View style={{ padding: 40, alignItems: 'center' }}>
-                  <Text style={styles.emptyText}>{t('noData')}</Text>
-                </View>
-              }
+              ListEmptyComponent={<Text style={styles.emptyText}>{t('noData')}</Text>}
             />
           )}
-        </>
+        </View>
       )}
 
       {/* ===== MODALS ===== */}
@@ -915,11 +956,11 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
-    backgroundColor: colors.secondary,
-    borderRadius: radii.sm,
-    padding: 3,
+    backgroundColor: colors.tertiary,
+    borderRadius: radii.md,
+    padding: 4,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
   },
   tab: {
     flex: 1,
@@ -927,46 +968,52 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: radii.sm - 2,
+    paddingVertical: 12,
+    borderRadius: radii.sm,
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
   },
   tabText: {
-    color: colors.textTertiary,
+    color: colors.text,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: colors.text,
-    fontWeight: '700',
+    color: colors.white,
+    fontWeight: '800',
   },
   // Chips
-  chipsScroll: {
-    maxHeight: 52,
+  tabContent: {
+    flex: 1,
+  },
+  chipsWrapper: {
+    zIndex: 1,
+    backgroundColor: colors.primary,
+    paddingBottom: spacing.sm,
   },
   chipsContainer: {
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     gap: 8,
     alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderRadius: radii.full,
-    backgroundColor: colors.secondary,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.tertiary,
+    borderWidth: 2,
+    borderColor: colors.accent,
   },
   chipActive: {
     backgroundColor: colors.accent,
     borderColor: colors.accent,
   },
   chipText: {
-    color: colors.textSecondary,
+    color: colors.text,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   chipTextActive: {
     color: colors.white,
@@ -1016,8 +1063,8 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     backgroundColor: colors.secondary,
     borderRadius: radii.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1089,16 +1136,31 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
   launchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     backgroundColor: colors.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: radii.sm,
   },
   launchBtnText: {
     color: colors.white,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Mode badges
+  modeActiveBadge: {
+    backgroundColor: colors.success,
+    borderRadius: radii.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  modeActiveBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  modeDeactivateBtn: {
+    backgroundColor: colors.error,
   },
   // Modals
   modalOverlay: {
