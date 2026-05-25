@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
+import { fetch as expoFetch } from 'expo/fetch';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaFile, NangoConnection, NangoProvider, Session, Skill, SubscriptionPlan } from '../types';
+import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaAttachment, MediaFile, NangoConnection, NangoProvider, Session, Skill, SubscriptionPlan } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
@@ -69,6 +70,35 @@ async function safeJson(res: Response): Promise<any> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Parse a single SSE frame ("event: X\ndata: {...}") into the event object.
+ * Returns `{ type, ...data }` or null for comment/keepalive/empty frames.
+ * The backend embeds `type` in every StreamEvent payload except `stream:complete`,
+ * where the event name carries it — so we backfill `type` from the event name.
+ */
+function parseSseFrame(frame: string): any | null {
+  let eventType: string | null = null;
+  const dataLines: string[] = [];
+  for (const rawLine of frame.split('\n')) {
+    const line = rawLine.replace(/\r$/, '');
+    if (!line || line.startsWith(':')) continue; // keepalive / comment
+    if (line.startsWith('event:')) {
+      eventType = line.slice(6).trim();
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice(5).replace(/^ /, ''));
+    }
+  }
+  if (!dataLines.length) return null;
+  let data: any;
+  try {
+    data = JSON.parse(dataLines.join('\n'));
+  } catch {
+    return null;
+  }
+  if (!data.type && eventType) data.type = eventType;
+  return data;
 }
 
 // Global 401 handler — triggers auto-logout from any API call
@@ -299,6 +329,100 @@ export const apiService = {
     if (!res.ok) return [];
     const data = await safeJson(res);
     return data?.messages ?? data?.conversation?.messages ?? [];
+  },
+
+  /**
+   * Send a message and stream the agent run over a SINGLE SSE connection.
+   * Replaces the old dual-channel design (HTTP trigger + separate WebSocket):
+   * here every stream event arrives in-order in the same HTTP response body,
+   * so there is no join-room race and no event can be lost on reconnection.
+   *
+   * `onEvent` receives each parsed event ({ type, ...payload }) — the same shape
+   * the WebSocket path used, so the consumer's event switch is unchanged.
+   * Aborting `opts.signal` cancels the run (backend stops on `req.close`).
+   */
+  async streamMessage(
+    token: string,
+    sessionId: string,
+    message: string,
+    opts: { media?: MediaAttachment[]; model?: string | null; signal?: AbortSignal },
+    onEvent: (event: any) => void,
+  ): Promise<void> {
+    // Proactive refresh — avoid a mid-stream 401 on a long run
+    let activeToken = token;
+    if (isTokenExpiringSoon(token)) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) activeToken = refreshed;
+    }
+
+    const doFetch = (t: string) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        Authorization: `Bearer ${t}`,
+      };
+      if (_activeSiteDomain) headers['X-Site-Domain'] = _activeSiteDomain;
+      const body: any = { message };
+      if (opts.media?.length) body.media = opts.media;
+      if (opts.model) body.model = opts.model;
+      return expoFetch(`${API_URL}/api/fc-agent/sessions/${sessionId}/messages/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: opts.signal,
+      });
+    };
+
+    let res = await doFetch(activeToken);
+
+    // Auto-refresh once on 401, then retry
+    if (res.status === 401) {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        res = await doFetch(newToken);
+      } else {
+        if (_onTokenExpired) _onTokenExpired();
+        throw new Error('Session expirée');
+      }
+    }
+
+    if (!res.ok || !res.body) {
+      let msg = `Erreur ${res.status}`;
+      try {
+        const j: any = await res.json();
+        msg = j?.error || j?.message || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // SSE frames are separated by a blank line
+        let sepIdx: number;
+        while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, sepIdx);
+          buffer = buffer.slice(sepIdx + 2);
+          const evt = parseSseFrame(frame);
+          if (evt) onEvent(evt);
+        }
+      }
+      // Flush any trailing frame
+      const tail = buffer.trim();
+      if (tail) {
+        const evt = parseSseFrame(tail);
+        if (evt) onEvent(evt);
+      }
+    } finally {
+      try { reader.releaseLock(); } catch {}
+    }
   },
 
   async renameSession(token: string, sessionId: string, title: string): Promise<boolean> {
