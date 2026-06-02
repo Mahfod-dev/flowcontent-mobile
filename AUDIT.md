@@ -61,8 +61,8 @@ Convention :
 - ~~Mémoïsation : `Sidebar` `renderSession`, `MediaScreen` `filteredFiles`,
   `NotificationsScreen` markdown~~ ✅ Batch 8. `App.tsx PanResponder` déjà dans `useRef` (vérifié).
 - `SkillsScreen.tsx:480` : `ScrollView horizontal` → `FlatList horizontal`
-- A11y : `accessibilityHint` Sidebar footer, `Skeleton` role progressbar,
-  `lineHeight` code blocks
+- ~~A11y : `accessibilityHint` Sidebar footer, `Skeleton` role progressbar,
+  `lineHeight` code blocks~~ ✅ Batch 9
 - `markdown onLinkPress` → `safeOpenURL`
 - `expo-speech-recognition` : `^` → `~`
 - `api.ts:857` : log au cleanup AsyncStorage legacy
