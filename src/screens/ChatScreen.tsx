@@ -19,7 +19,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useSpeech } from '../hooks/useSpeech';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageBubble } from '../components/MessageBubble';
 import { ToolActivity } from '../components/ToolActivity';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +49,7 @@ interface ChatScreenProps {
 export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingMessageSent, activeMode }: ChatScreenProps) {
   const { user } = useAuth();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -235,7 +236,9 @@ export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingM
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}>
+        // AUDIT P0-10 — compensate for the safe-area top inset so the input
+        // doesn't slip under the keyboard on iPhones with a notch.
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onOpenDrawer} style={styles.headerBtn} activeOpacity={0.7} accessibilityLabel={t('openMenu')} accessibilityRole="button">

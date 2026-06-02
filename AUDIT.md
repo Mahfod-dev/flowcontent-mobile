@@ -14,16 +14,16 @@ Convention :
 
 | ID | Fichier | Problème | Statut |
 |----|---------|----------|--------|
-| P0-1 | `ErrorBoundary.tsx` | Couleurs hardcodées → écran d'erreur illisible en mode clair | ⏳ |
+| P0-1 | `ErrorBoundary.tsx` | Couleurs hardcodées → écran d'erreur illisible en mode clair | ✅ Batch 2 |
 | P0-2 | `useDeepLink.ts:17` | Fallback `http://` accepté (vecteur MITM) | ✅ Batch 1 |
 | P0-3 | `useDeepLink.ts` | Pas de validation hostname ni format sessionId | ✅ Batch 1 |
-| P0-4 | `app.json` Android | Perms `READ_MEDIA_*` absentes → crash Android 13+ | ⏳ |
+| P0-4 | `app.json` Android | Perms `READ_MEDIA_*` absentes → crash Android 13+ | ✅ Batch 2 |
 | P0-5 | `useBiometric.ts` | Password stocké en clair dans SecureStore | ✅ Batch 1 (`requireAuthentication: true` + migration v2) |
 | P0-6 | `AuthContext.tsx` | `logout()` ne nettoie pas les credentials biométriques | ✅ Batch 1 |
 | P0-7 | `AppState` listeners | 3 listeners indépendants firent à 'active' sans coordination | ⏳ |
-| P0-8 | App.tsx animations | `AccessibilityInfo.isReduceMotionEnabled` jamais consulté | ⏳ |
-| P0-9 | `ChatScreen.tsx` input | `insets.bottom` manquant → bouton sur home indicator | ⏳ |
-| P0-10 | `ChatScreen.tsx` | `keyboardVerticalOffset={0}` cache l'input sous le clavier | ⏳ |
+| P0-8 | App.tsx animations | `AccessibilityInfo.isReduceMotionEnabled` jamais consulté | ✅ Batch 2 |
+| P0-9 | `ChatScreen.tsx` input | `insets.bottom` manquant → bouton sur home indicator | ❌ Faux positif — `SafeAreaView` pad déjà `insets.bottom` |
+| P0-10 | `ChatScreen.tsx` | `keyboardVerticalOffset={0}` cache l'input sous le clavier | ✅ Batch 2 |
 
 ## P1 — Qualité prod
 
