@@ -1,7 +1,10 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import { apiService } from './api';
+
+const PUSH_TOKEN_KEY = 'fc_expo_push_token';
 
 // Show notifications even when app is in foreground
 Notifications.setNotificationHandler({
@@ -15,6 +18,38 @@ Notifications.setNotificationHandler({
 });
 
 let _onNotificationTap: ((sessionId: string) => void) | null = null;
+
+/**
+ * AUDIT B5 — Push token persistence moved from AsyncStorage (plaintext) to
+ * SecureStore. Includes a one-shot migration: on first access we copy any
+ * AsyncStorage value over and remove the legacy key.
+ */
+async function getSavedPushToken(): Promise<string | null> {
+  try {
+    const secure = await SecureStore.getItemAsync(PUSH_TOKEN_KEY);
+    if (secure) return secure;
+    const legacy = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+    if (legacy) {
+      await SecureStore.setItemAsync(PUSH_TOKEN_KEY, legacy).catch(() => {});
+      AsyncStorage.removeItem(PUSH_TOKEN_KEY).catch(() => {});
+      return legacy;
+    }
+  } catch {}
+  return null;
+}
+
+async function setSavedPushToken(token: string) {
+  try {
+    await SecureStore.setItemAsync(PUSH_TOKEN_KEY, token);
+  } catch {}
+  // Ensure the legacy plaintext copy is gone
+  AsyncStorage.removeItem(PUSH_TOKEN_KEY).catch(() => {});
+}
+
+async function clearSavedPushToken() {
+  await SecureStore.deleteItemAsync(PUSH_TOKEN_KEY).catch(() => {});
+  AsyncStorage.removeItem(PUSH_TOKEN_KEY).catch(() => {});
+}
 
 export const notificationService = {
   setOnNotificationTap(cb: (sessionId: string) => void) {
@@ -52,11 +87,11 @@ export const notificationService = {
 
       // Register on backend + persist locally for logout cleanup
       await apiService.registerDeviceToken(token, expoPushToken);
-      await AsyncStorage.setItem('fc_expo_push_token', expoPushToken);
+      await setSavedPushToken(expoPushToken);
 
       return expoPushToken;
     } catch (err) {
-      console.warn('[Push] Init error:', err);
+      if (__DEV__) console.warn('[Push] Init error:', err);
       return null;
     }
   },
@@ -75,4 +110,9 @@ export const notificationService = {
   async unregister(token: string, expoPushToken: string) {
     await apiService.unregisterDeviceToken(token, expoPushToken);
   },
+
+  // Exposed for AuthContext to restore the push token on session resume
+  // and to clean it up on logout — no plaintext path remains.
+  getSavedPushToken,
+  clearSavedPushToken,
 };

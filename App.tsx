@@ -122,10 +122,22 @@ function AppContent() {
     })();
   }, [user, isLoading, biometricEnabled, hasSavedCredentials]);
 
-  // Init push notifications
+  // Init push notifications. AUDIT B5: we used to fire this on every
+  // `user.token` change, which means every access-token refresh re-called
+  // notificationService.init() + apiService.registerDeviceToken(). Track the
+  // user id we already registered for, and skip if unchanged. We do still
+  // re-init when the user actually changes (logout + login as someone else).
   const pushTokenRef = useRef<string | null>(null);
+  const registeredForUserRef = useRef<string | null>(null);
   useEffect(() => {
+    if (!user?.id) {
+      registeredForUserRef.current = null;
+      return;
+    }
     if (!user?.token) return;
+    if (registeredForUserRef.current === user.id) return; // already registered
+    registeredForUserRef.current = user.id;
+
     notificationService.init(user.token).then((t) => {
       pushTokenRef.current = t;
     });
@@ -135,7 +147,7 @@ function AppContent() {
     });
     const sub = notificationService.addTapListener();
     return () => sub.remove();
-  }, [user?.token]);
+  }, [user?.id, user?.token]);
 
   // Fetch active mode
   useEffect(() => {

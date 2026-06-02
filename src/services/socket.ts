@@ -37,14 +37,21 @@ function resetHeartbeatTimer() {
 }
 
 function attachListenersToSocket(s: Socket) {
+  // Defensive: even though we only call this on freshly-created sockets,
+  // removing first guarantees no duplicate handlers if the call pattern
+  // ever changes (AUDIT B5).
+  s.off('chat:stream');
+  s.off('chat:typing');
   s.on('chat:stream', (event: any) => {
     streamListeners.forEach((cb) => cb(event));
   });
   s.on('chat:typing', (data: any) => {
     typingListeners.forEach((cb) => cb(data));
   });
-  // Re-attach all generic listeners
+  // Re-attach all generic listeners — clear any prior handler for each
+  // event first, then bind the current callbacks.
   genericListeners.forEach((cbs, event) => {
+    s.off(event);
     cbs.forEach((cb) => s.on(event, cb));
   });
 }
