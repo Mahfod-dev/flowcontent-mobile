@@ -191,7 +191,25 @@ export const apiService = {
   setOnTokenExpired(cb: () => void) { _onTokenExpired = cb; },
   setOnTokenRefreshed(cb: ((token: string) => void) | null) { _onTokenRefreshed = cb; },
 
-  setActiveSiteDomain(domain: string | null) { _activeSiteDomain = domain; },
+  /**
+   * Set the active site domain — used as `X-Site-Domain` header on subsequent
+   * API calls. We strictly validate the input because that string is echoed
+   * into an HTTP header: a value containing CR/LF or non-hostname chars would
+   * enable header injection (AUDIT P1).
+   */
+  setActiveSiteDomain(domain: string | null) {
+    if (domain === null) { _activeSiteDomain = null; return; }
+    const ok =
+      typeof domain === 'string' &&
+      domain.length > 0 && domain.length <= 253 &&
+      /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(domain);
+    if (!ok) {
+      if (__DEV__) console.warn('[api] setActiveSiteDomain rejected:', domain);
+      _activeSiteDomain = null;
+      return;
+    }
+    _activeSiteDomain = domain;
+  },
   getActiveSiteDomain(): string | null { return _activeSiteDomain; },
 
   async loginWithGoogle(idToken: string) {

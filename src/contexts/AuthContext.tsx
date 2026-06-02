@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
+import { clearBiometricCredentials } from '../hooks/useBiometric';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -50,6 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Disconnect socket BEFORE clearing token (socket may need token for clean shutdown)
     socketService.disconnect();
     apiService.clearToken();
+    // Wipe biometric-saved credentials — staying signed in via biometric after
+    // an explicit logout would defeat the user's intent (AUDIT P0-6).
+    await clearBiometricCredentials().catch(() => {});
     setUser(null);
   }, []);
 

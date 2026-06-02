@@ -15,11 +15,11 @@ Convention :
 | ID | Fichier | Problème | Statut |
 |----|---------|----------|--------|
 | P0-1 | `ErrorBoundary.tsx` | Couleurs hardcodées → écran d'erreur illisible en mode clair | ⏳ |
-| P0-2 | `useDeepLink.ts:17` | Fallback `http://` accepté (vecteur MITM) | ⏳ |
-| P0-3 | `useDeepLink.ts` | Pas de validation hostname ni format sessionId | ⏳ |
+| P0-2 | `useDeepLink.ts:17` | Fallback `http://` accepté (vecteur MITM) | ✅ Batch 1 |
+| P0-3 | `useDeepLink.ts` | Pas de validation hostname ni format sessionId | ✅ Batch 1 |
 | P0-4 | `app.json` Android | Perms `READ_MEDIA_*` absentes → crash Android 13+ | ⏳ |
-| P0-5 | `useBiometric.ts` | Password stocké en clair dans SecureStore | ⏳ |
-| P0-6 | `AuthContext.tsx` | `logout()` ne nettoie pas les credentials biométriques | ⏳ |
+| P0-5 | `useBiometric.ts` | Password stocké en clair dans SecureStore | ✅ Batch 1 (`requireAuthentication: true` + migration v2) |
+| P0-6 | `AuthContext.tsx` | `logout()` ne nettoie pas les credentials biométriques | ✅ Batch 1 |
 | P0-7 | `AppState` listeners | 3 listeners indépendants firent à 'active' sans coordination | ⏳ |
 | P0-8 | App.tsx animations | `AccessibilityInfo.isReduceMotionEnabled` jamais consulté | ⏳ |
 | P0-9 | `ChatScreen.tsx` input | `insets.bottom` manquant → bouton sur home indicator | ⏳ |
@@ -40,7 +40,7 @@ Convention :
 ### Auth / sécurité
 - `api.ts:12` : `decodeJwtPayload` — commentaire « info-only, never authz »
 - `App.tsx:105` + `notifications.ts` : push registration à chaque token change
-- `api.ts:164` : `X-Site-Domain` sans validation côté setter
+- ~~`api.ts:164` : `X-Site-Domain` sans validation côté setter~~ ✅ Batch 1
 - `notifications.ts:55` : push token en AsyncStorage → SecureStore
 
 ### Build / monitoring
