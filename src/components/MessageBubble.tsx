@@ -394,7 +394,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <TouchableOpacity
               onPress={handleCopy}
               style={[styles.feedbackBtn, copied && styles.feedbackActive]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons
                 name={copied ? 'checkmark' : 'copy-outline'}
@@ -405,7 +405,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <TouchableOpacity
               onPress={() => handleFeedback('up')}
               style={[styles.feedbackBtn, feedback === 'up' && styles.feedbackActive]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons
                 name={feedback === 'up' ? 'thumbs-up' : 'thumbs-up-outline'}
@@ -416,7 +416,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <TouchableOpacity
               onPress={() => handleFeedback('down')}
               style={[styles.feedbackBtn, feedback === 'down' && styles.feedbackActiveDown]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons
                 name={feedback === 'down' ? 'thumbs-down' : 'thumbs-down-outline'}

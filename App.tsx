@@ -6,8 +6,10 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  BackHandler,
   Keyboard,
   PanResponder,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -85,6 +87,7 @@ function AppContent() {
       sub?.remove?.();
     };
   }, []);
+
 
   // Biometric lock on app start (when session is still active)
   useEffect(() => {
@@ -264,6 +267,20 @@ function AppContent() {
       drawerOpenRef.current = false;
     });
   }, [drawerAnim, overlayAnim, dur]);
+
+  // Android hardware back button — close drawer first, then return to chat
+  // from a secondary screen; otherwise let the OS handle it (= exit).
+  // AUDIT B7: previously, back from any screen would just exit the app.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBack = () => {
+      if (drawerOpen) { closeDrawer(); return true; }
+      if (activeScreen !== 'chat') { setActiveScreen('chat'); return true; }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => sub.remove();
+  }, [drawerOpen, activeScreen, closeDrawer]);
 
   // Edge pan gesture to open drawer by swiping from left edge
   const edgePanResponder = useRef(

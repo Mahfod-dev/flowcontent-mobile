@@ -47,11 +47,21 @@ function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelet
   onDeleteRef.current = onDelete;
   onPinRef.current = onPin;
   const swipeStyles = useMemo(() => createSwipeStyles(colors), [colors]);
+  // AUDIT B7: ignore new gestures while a spring/timing animation is settling
+  // so rapid swipes don't stack and leave translateX in a bad state.
+  const isAnimatingRef = useRef(false);
+  const animateTo = (toValue: number, kind: 'spring' | 'timing' = 'spring') => {
+    isAnimatingRef.current = true;
+    const anim = kind === 'spring'
+      ? Animated.spring(translateX, { toValue, useNativeDriver: true, bounciness: 0 })
+      : Animated.timing(translateX, { toValue, duration: 200, useNativeDriver: true });
+    anim.start(() => { isAnimatingRef.current = false; });
+  };
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy) * 2,
+        !isAnimatingRef.current && Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy) * 2,
       onPanResponderMove: (_, gs) => {
         if (gs.dx < 0) {
           translateX.setValue(Math.max(gs.dx, -80));
@@ -60,13 +70,9 @@ function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelet
         }
       },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx < -50) {
-          Animated.spring(translateX, { toValue: -80, useNativeDriver: true, bounciness: 0 }).start();
-        } else if (gs.dx > 50) {
-          Animated.spring(translateX, { toValue: 80, useNativeDriver: true, bounciness: 0 }).start();
-        } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-        }
+        if (gs.dx < -50) animateTo(-80);
+        else if (gs.dx > 50) animateTo(80);
+        else animateTo(0);
       },
     })
   ).current;
@@ -76,10 +82,7 @@ function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelet
       {/* Pin action (swipe right) */}
       <TouchableOpacity
         style={swipeStyles.pinAction}
-        onPress={() => {
-          Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-          onPinRef.current();
-        }}
+        onPress={() => { animateTo(0, 'timing'); onPinRef.current(); }}
         activeOpacity={0.7}
       >
         <Text style={swipeStyles.pinActionText}>{isPinned ? t('unpin') : t('pin')}</Text>
@@ -87,10 +90,7 @@ function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelet
       {/* Delete action (swipe left) */}
       <TouchableOpacity
         style={swipeStyles.deleteAction}
-        onPress={() => {
-          Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-          onDeleteRef.current();
-        }}
+        onPress={() => { animateTo(0, 'timing'); onDeleteRef.current(); }}
         activeOpacity={0.7}
       >
         <Text style={swipeStyles.deleteActionText}>{t('delete')}</Text>

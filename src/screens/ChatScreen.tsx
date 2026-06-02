@@ -324,6 +324,12 @@ export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingM
         )}
         onScroll={handleScroll}
         scrollEventThrottle={100}
+        // AUDIT B7: as new content streams in, follow the bottom — but only
+        // if the user is already near it (handleScroll keeps the ref fresh).
+        // This kills the visible lag where new tokens appear off-screen.
+        onContentSizeChange={() => {
+          if (isNearBottomRef.current) flatListRef.current?.scrollToEnd({ animated: true });
+        }}
         contentContainerStyle={styles.messageList}
         initialNumToRender={15}
         maxToRenderPerBatch={10}
