@@ -33,15 +33,15 @@ Convention :
 - ~~`api.ts:34` (`fetchWithTimeout`) : retry sur AbortError (annulation utilisateur)~~ ✅ Batch 4
 - ~~`api.ts:389` : message d'erreur HTTP vide quand body non-JSON~~ ✅ Batch 4
 - ~~`socket.ts:10` : heartbeat 5 min trop long → 2-3 min~~ ✅ Batch 4 (2 min)
-- `socket.ts:36` : `removeAllListeners` avant `attachListenersToSocket` (Batch 5)
+- ~~`socket.ts:36` : `removeAllListeners` avant `attachListenersToSocket`~~ ✅ Batch 5 (defensive `off()`)
 - ~~`ChatScreen.tsx:128` : `pendingMessage` ignore `sessionId` dans deps~~ ✅ Batch 4
-- `api.ts:118` : refresh token rotation — lock persistant si serveur invalide à l'usage (Batch 5)
+- ~~`api.ts:118` : refresh token rotation — lock persistant si serveur invalide à l'usage~~ ✅ Batch 5 (cooldown 2s post-échec)
 
 ### Auth / sécurité
-- `api.ts:12` : `decodeJwtPayload` — commentaire « info-only, never authz »
-- `App.tsx:105` + `notifications.ts` : push registration à chaque token change
+- ~~`api.ts:12` : `decodeJwtPayload` — commentaire « info-only, never authz »~~ ✅ Batch 5
+- ~~`App.tsx:105` + `notifications.ts` : push registration à chaque token change~~ ✅ Batch 5 (`registeredForUserRef`)
 - ~~`api.ts:164` : `X-Site-Domain` sans validation côté setter~~ ✅ Batch 1
-- `notifications.ts:55` : push token en AsyncStorage → SecureStore
+- ~~`notifications.ts:55` : push token en AsyncStorage → SecureStore~~ ✅ Batch 5 (+ migration)
 
 ### Build / monitoring
 - `package.json` : `punycode` inutilisé

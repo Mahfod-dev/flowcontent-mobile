@@ -8,7 +8,12 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store
 
 const DEFAULT_TIMEOUT_MS = 30_000; // 30s default timeout for all API calls
 
-/** Decode JWT payload without external library (base64url → JSON) */
+/**
+ * Decode the JWT payload — strictly INFORMATIONAL (e.g. proactive refresh
+ * scheduling). The signature is NOT verified here. Never use this to make
+ * authorization decisions — let the server reject with 401 and react to that
+ * (AUDIT B5).
+ */
 function decodeJwtPayload(token: string): { exp?: number; sub?: string } | null {
   try {
     const parts = token.split('.');
@@ -127,23 +132,39 @@ let _activeSiteDomain: string | null = null;
 let _refreshPromise: Promise<string | null> | null = null;
 // Flag to prevent stale refresh callbacks after logout
 let _loggedOut = false;
+// AUDIT B5: when the server invalidates a refresh token on use (best practice),
+// a failed attempt leaves us with a token the server considers spent. A second
+// caller arriving right after would hit the same fate. Cool down briefly to
+// avoid two near-simultaneous attempts both failing.
+let _lastFailedRefreshAt = 0;
+const REFRESH_FAILURE_COOLDOWN_MS = 2000;
 
 async function tryRefreshToken(): Promise<string | null> {
   if (_loggedOut) return null;
+  if (Date.now() - _lastFailedRefreshAt < REFRESH_FAILURE_COOLDOWN_MS) return null;
   if (_refreshPromise) return _refreshPromise;
   _refreshPromise = (async () => {
     try {
       const refreshToken = await SecureStore.getItemAsync('fc_refresh_token');
-      if (!refreshToken || _loggedOut) return null;
+      if (!refreshToken || _loggedOut) {
+        _lastFailedRefreshAt = Date.now();
+        return null;
+      }
 
       const res = await fetchWithTimeout(`${API_URL}/api/auth/refresh-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
-      if (!res.ok || _loggedOut) return null;
+      if (!res.ok || _loggedOut) {
+        _lastFailedRefreshAt = Date.now();
+        return null;
+      }
       const data = await safeJson(res);
-      if (!data?.access_token || !data?.refresh_token || _loggedOut) return null;
+      if (!data?.access_token || !data?.refresh_token || _loggedOut) {
+        _lastFailedRefreshAt = Date.now();
+        return null;
+      }
 
       // Persist new tokens
       await SecureStore.setItemAsync('fc_token', data.access_token);
@@ -154,6 +175,7 @@ async function tryRefreshToken(): Promise<string | null> {
 
       return _loggedOut ? null : data.access_token;
     } catch {
+      _lastFailedRefreshAt = Date.now();
       return null;
     } finally {
       _refreshPromise = null;

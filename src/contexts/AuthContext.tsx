@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
+import { notificationService } from '../services/notifications';
 import { clearBiometricCredentials } from '../hooks/useBiometric';
 import { useAppStateChange } from '../hooks/useAppForeground';
 import { User } from '../types';
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (t) apiService.unregisterDeviceToken(t, pushToken).catch(() => {});
       });
       pushTokenRef.current = null;
-      AsyncStorage.removeItem('fc_expo_push_token').catch(() => {});
+      notificationService.clearSavedPushToken().catch(() => {});
     }
     // Revoke refresh token server-side before clearing
     try {
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             // Restore push token ref for logout (non-critical, don't let it break auth)
             try {
-              const savedPush = await AsyncStorage.getItem('fc_expo_push_token');
+              const savedPush = await notificationService.getSavedPushToken();
               if (savedPush) pushTokenRef.current = savedPush;
             } catch {}
 
