@@ -75,18 +75,17 @@ function AppContent() {
     }
   }, [user?.id]); // only on initial mount per user
 
-  // Biometric auto-login: when no session but saved credentials exist
+  // Biometric auto-login: when no session but saved credentials exist.
+  // getSavedCredentials() prompts biometric itself (the password key has
+  // `requireAuthentication: true`), so no separate authenticate() call —
+  // that would double-prompt the user.
   const biometricAutoLoginAttempted = useRef(false);
   useEffect(() => {
     if (user || isLoading || biometricAutoLoginAttempted.current) return;
     if (!biometricEnabled || !hasSavedCredentials) return;
     biometricAutoLoginAttempted.current = true;
     setBiometricAutoLogin(true);
-    authenticate().then(async (ok) => {
-      if (!ok) {
-        setBiometricAutoLogin(false);
-        return;
-      }
+    (async () => {
       const creds = await getSavedCredentials();
       if (!creds) {
         setBiometricAutoLogin(false);
@@ -95,11 +94,11 @@ function AppContent() {
       try {
         await login(creds.email, creds.password);
       } catch {
-        // Credentials may have changed — clear saved ones
+        // Credentials may have changed server-side — clear saved ones
         clearCredentials();
       }
       setBiometricAutoLogin(false);
-    });
+    })();
   }, [user, isLoading, biometricEnabled, hasSavedCredentials]);
 
   // Init push notifications
