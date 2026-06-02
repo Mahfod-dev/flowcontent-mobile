@@ -52,7 +52,7 @@ Convention :
 ### UI
 - ~~`ChatScreen.tsx` FlatList : `onContentSizeChange` manquant pour auto-scroll~~ ✅ Batch 7
 - ~~`MessageBubble.tsx:394` : hitSlop trop petit (recommandé Apple ≥ 44pt)~~ ✅ Batch 7 (12pt → ~45pt total)
-- `SkillsScreen.tsx` (1351 l) : refacto en 3 fichiers — hors-scope de l'audit, à planifier séparément
+- ~~`SkillsScreen.tsx` (1351 l) : refacto en 3 fichiers~~ ✅ Final (170 l shell + `skills/PipelinesTab.tsx`, `ToolsTab.tsx`, `ModesTab.tsx`, `shared.ts`)
 - ~~`Sidebar.tsx` SwipeableRow : flag `isAnimating`~~ ✅ Batch 7
 - ~~App.tsx : pas de `BackHandler` Android~~ ✅ Batch 7
 
@@ -60,7 +60,7 @@ Convention :
 
 - ~~Mémoïsation : `Sidebar` `renderSession`, `MediaScreen` `filteredFiles`,
   `NotificationsScreen` markdown~~ ✅ Batch 8. `App.tsx PanResponder` déjà dans `useRef` (vérifié).
-- `SkillsScreen.tsx:480` : `ScrollView horizontal` → `FlatList horizontal`
+- ~~`SkillsScreen.tsx:480` : `ScrollView horizontal` → `FlatList horizontal`~~ ✅ Final (pipelines + tools chips)
 - ~~A11y : `accessibilityHint` Sidebar footer, `Skeleton` role progressbar,
   `lineHeight` code blocks~~ ✅ Batch 9
 - ~~`markdown onLinkPress` → `safeOpenURL`~~ ✅ Batch 10 (MessageBubble + NotificationsScreen)

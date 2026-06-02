@@ -268,6 +268,16 @@ function AppContent() {
     });
   }, [drawerAnim, overlayAnim, dur]);
 
+  // AUDIT final: stabilize the Sidebar footer navigation handlers so the
+  // 6 TouchableOpacity onPress props don't get a fresh closure on every
+  // App re-render (was a no-op for memo but cheap dette to clear).
+  const openNotifications = useCallback(() => { closeDrawer(); setActiveScreen('notifications'); }, [closeDrawer]);
+  const openProfile = useCallback(() => { closeDrawer(); setActiveScreen('profile'); }, [closeDrawer]);
+  const openDashboard = useCallback(() => { closeDrawer(); setActiveScreen('dashboard'); }, [closeDrawer]);
+  const openUpgrade = useCallback(() => { closeDrawer(); setActiveScreen('upgrade'); }, [closeDrawer]);
+  const openMedia = useCallback(() => { closeDrawer(); setActiveScreen('media'); }, [closeDrawer]);
+  const openSkills = useCallback(() => { closeDrawer(); setActiveScreen('skills'); }, [closeDrawer]);
+
   // Android hardware back button — close drawer first, then return to chat
   // from a secondary screen; otherwise let the OS handle it (= exit).
   // AUDIT B7: previously, back from any screen would just exit the app.
@@ -470,12 +480,12 @@ function AppContent() {
           onSelectSession={handleSelectSession}
           onNewChat={handleNewChat}
           onClose={closeDrawer}
-          onOpenNotifications={() => { closeDrawer(); setActiveScreen('notifications'); }}
-          onOpenProfile={() => { closeDrawer(); setActiveScreen('profile'); }}
-          onOpenDashboard={() => { closeDrawer(); setActiveScreen('dashboard'); }}
-          onOpenUpgrade={() => { closeDrawer(); setActiveScreen('upgrade'); }}
-          onOpenMedia={() => { closeDrawer(); setActiveScreen('media'); }}
-          onOpenSkills={() => { closeDrawer(); setActiveScreen('skills'); }}
+          onOpenNotifications={openNotifications}
+          onOpenProfile={openProfile}
+          onOpenDashboard={openDashboard}
+          onOpenUpgrade={openUpgrade}
+          onOpenMedia={openMedia}
+          onOpenSkills={openSkills}
         />
       </Animated.View>
     </View>
