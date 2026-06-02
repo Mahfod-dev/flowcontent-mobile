@@ -81,14 +81,17 @@ export function NotificationsScreen({ onBack }: Props) {
     } catch {}
   };
 
-  const PRIORITY_COLORS: Record<string, string> = {
+  const PRIORITY_COLORS: Record<string, string> = useMemo(() => ({
     urgent: colors.error,
     high: colors.warning,
     medium: colors.accent,
     low: colors.textTertiary,
-  };
+  }), [colors.error, colors.warning, colors.accent, colors.textTertiary]);
 
-  const renderNotification = ({ item }: { item: AppNotification }) => (
+  // AUDIT B8: memoize the renderItem function so FlatList doesn't tear down
+  // and rebuild rows on every parent re-render. The markdown inside is
+  // expensive, so even saving a few rerenders is worth it.
+  const renderNotification = useCallback(({ item }: { item: AppNotification }) => (
     <TouchableOpacity
       style={[styles.card, !item.is_read && styles.cardUnread]}
       onPress={() => !item.is_read && handleMarkRead(item.id)}
@@ -109,7 +112,7 @@ export function NotificationsScreen({ onBack }: Props) {
         </View>
       </View>
     </TouchableOpacity>
-  );
+  ), [styles, colors.textTertiary, mdTheme, handleMarkRead, PRIORITY_COLORS]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 

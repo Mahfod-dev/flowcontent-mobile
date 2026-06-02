@@ -164,12 +164,14 @@ export function MediaScreen({ onBack }: MediaScreenProps) {
     }
   }, [user?.token]);
 
-  const filteredFiles = files.filter((f) => {
+  // AUDIT B8: memoize the filter so we don't rescan the file list on every
+  // re-render. Inputs are the source list and the active tab.
+  const filteredFiles = useMemo(() => files.filter((f) => {
     if (activeTab === 'images') return IMAGE_TYPES.includes(f.mimeType) || f.bucket === 'images';
     if (activeTab === 'audio') return AUDIO_TYPES.includes(f.mimeType) || f.bucket === 'audio';
     if (activeTab === 'documents') return !IMAGE_TYPES.includes(f.mimeType) && !AUDIO_TYPES.includes(f.mimeType) && f.bucket !== 'images' && f.bucket !== 'audio';
     return true;
-  });
+  }), [files, activeTab]);
 
   const renderFile = ({ item }: { item: MediaFile }) => {
     const isImage = IMAGE_TYPES.includes(item.mimeType);
