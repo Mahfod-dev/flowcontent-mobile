@@ -278,7 +278,9 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
     setRenameText('');
   }, [renameModal, user?.token, renameText]);
 
-  const renderSession = ({ item }: { item: Session }) => {
+  // AUDIT B8: memoize renderItem so FlatList doesn't recompute it on every
+  // parent re-render. All handler deps are themselves useCallback-stabilized.
+  const renderSession = useCallback(({ item }: { item: Session }) => {
     const isActive = item.id === activeSessionId;
     const isPinned = pinnedIds.has(item.id);
     return (
@@ -306,7 +308,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
         </TouchableOpacity>
       </SwipeableRow>
     );
-  };
+  }, [activeSessionId, pinnedIds, colors, styles, handleDelete, togglePin, onSelectSession, handleLongPress]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
