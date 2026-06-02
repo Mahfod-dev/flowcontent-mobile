@@ -58,8 +58,8 @@ Convention :
 
 ## P2 — Polish / perf
 
-- Mémoïsation : `Sidebar` `renderSession`, `MediaScreen` `filteredFiles`,
-  `NotificationsScreen` markdown, `App.tsx` `PanResponder` dans `useRef`
+- ~~Mémoïsation : `Sidebar` `renderSession`, `MediaScreen` `filteredFiles`,
+  `NotificationsScreen` markdown~~ ✅ Batch 8. `App.tsx PanResponder` déjà dans `useRef` (vérifié).
 - `SkillsScreen.tsx:480` : `ScrollView horizontal` → `FlatList horizontal`
 - A11y : `accessibilityHint` Sidebar footer, `Skeleton` role progressbar,
   `lineHeight` code blocks
