@@ -27,6 +27,9 @@ export function Skeleton({ width, height, borderRadius = 8, style }: SkeletonPro
 
   return (
     <Animated.View
+      // AUDIT B9 — annonce as a loading indicator for VoiceOver / TalkBack.
+      accessibilityRole="progressbar"
+      accessibilityLabel="Chargement"
       style={[
         {
           width: width as any,

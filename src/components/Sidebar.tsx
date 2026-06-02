@@ -397,7 +397,14 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
         )}
         <View style={styles.footerActions}>
           {onOpenNotifications && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenNotifications} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenNotifications}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={notifCount > 0 ? `${t('notifs')}, ${notifCount} ${t('notifs').toLowerCase()}` : t('notifs')}
+              accessibilityHint="Ouvre la liste de vos notifications"
+            >
               <Ionicons name="notifications-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('notifs')}</Text>
               {notifCount > 0 && (
@@ -408,31 +415,66 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             </TouchableOpacity>
           )}
           {onOpenDashboard && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenDashboard} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenDashboard}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('stats')}
+              accessibilityHint="Affiche vos statistiques d'utilisation"
+            >
               <Ionicons name="bar-chart-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('stats')}</Text>
             </TouchableOpacity>
           )}
           {onOpenUpgrade && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenUpgrade} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenUpgrade}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('subscription')}
+              accessibilityHint="Gère ton abonnement et tes crédits"
+            >
               <Ionicons name="diamond-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('subscription')}</Text>
             </TouchableOpacity>
           )}
           {onOpenSkills && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenSkills} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenSkills}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('pipelines')}
+              accessibilityHint="Ouvre les skills et modes de l'agent"
+            >
               <Ionicons name="rocket-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('pipelines')}</Text>
             </TouchableOpacity>
           )}
           {onOpenMedia && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenMedia} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenMedia}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('files')}
+              accessibilityHint="Ouvre la bibliothèque de tes fichiers"
+            >
               <Ionicons name="folder-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('files')}</Text>
             </TouchableOpacity>
           )}
           {onOpenProfile && (
-            <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenProfile} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenProfile}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('profile')}
+              accessibilityHint="Modifie ton profil et tes préférences"
+            >
               <Ionicons name="person-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('profile')}</Text>
             </TouchableOpacity>
