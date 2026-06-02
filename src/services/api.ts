@@ -51,8 +51,17 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEF
     } catch (err: any) {
       clearTimeout(timer);
       lastError = err;
-      // Retry on network/timeout errors
-      if (attempt < MAX_RETRIES && (err.name === 'AbortError' || err.message?.includes('network'))) {
+      // If the caller passed their own signal and aborted, don't retry —
+      // that's an intentional cancellation, not a transient failure
+      // (AUDIT B4).
+      const callerAborted = init?.signal?.aborted;
+      // Retry only on internal timeout (AbortError from our own controller)
+      // or genuine network errors. `init.signal.aborted` distinguishes the two.
+      const retriable =
+        attempt < MAX_RETRIES &&
+        !callerAborted &&
+        (err.name === 'AbortError' || err.message?.includes('network'));
+      if (retriable) {
         const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
         await new Promise((r) => setTimeout(r, delay));
         continue;
@@ -94,7 +103,11 @@ function parseSseFrame(frame: string): any | null {
   let data: any;
   try {
     data = JSON.parse(dataLines.join('\n'));
-  } catch {
+  } catch (err) {
+    // Silently dropping malformed frames used to mean "message vanishes
+    // without a trace" — at least surface it in dev so we can debug a
+    // mismatch between mobile and backend (AUDIT B4).
+    if (__DEV__) console.warn('[api] parseSseFrame: invalid JSON', eventType, err);
     return null;
   }
   if (!data.type && eventType) data.type = eventType;
@@ -405,10 +418,19 @@ export const apiService = {
     }
 
     if (!res.ok || !res.body) {
+      // Read as text first, then try JSON — many error responses are
+      // plain text and `.json()` swallows them silently (AUDIT B4).
       let msg = `Erreur ${res.status}`;
       try {
-        const j: any = await res.json();
-        msg = j?.error || j?.message || msg;
+        const text = await res.text();
+        if (text) {
+          try {
+            const j: any = JSON.parse(text);
+            msg = j?.error || j?.message || text.slice(0, 200);
+          } catch {
+            msg = text.slice(0, 200);
+          }
+        }
       } catch {}
       throw new Error(msg);
     }

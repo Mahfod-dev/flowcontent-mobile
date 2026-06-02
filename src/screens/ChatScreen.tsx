@@ -121,15 +121,19 @@ export function ChatScreen({ sessionId, onOpenDrawer, pendingMessage, onPendingM
     };
   }, []);
 
-  // Auto-send pending message (from Skills screen)
+  // Auto-send pending message (from Skills screen). AUDIT B4: depend on
+  // sessionId too — if the user switches sessions before the pending message
+  // is sent, we'd otherwise dispatch it to the WRONG session. Reset the
+  // "already sent" flag on every sessionId change.
   const pendingSentRef = useRef(false);
+  useEffect(() => { pendingSentRef.current = false; }, [sessionId]);
   useEffect(() => {
-    if (!pendingMessage || pendingSentRef.current || isLoadingMessages) return;
+    if (!pendingMessage || pendingSentRef.current || isLoadingMessages || !sessionId) return;
     pendingSentRef.current = true;
     sendMessage(pendingMessage, undefined, selectedModel.value).then(() => {
       onPendingMessageSent?.();
     });
-  }, [pendingMessage, isLoadingMessages]);
+  }, [pendingMessage, isLoadingMessages, sessionId]);
 
   const handleSend = async () => {
     if (!input.trim() && attachments.length === 0) return;
