@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { apiService } from '../services/api';
 import { MediaAttachment, Message, ToolCall } from '../types';
 
@@ -31,6 +32,9 @@ export function useChat(sessionId: string, userId: string) {
   sessionIdRef.current = sessionId;
   // Last user message, for retry.
   const lastUserMsgRef = useRef<{ text: string; media?: MediaAttachment[]; model?: string | null } | null>(null);
+  // True when the last sendMessage ended in a ⚠️ error message — used by the
+  // AppState recovery effect to know there's a response worth fetching from DB.
+  const lastErrorRef = useRef(false);
 
   useEffect(() => {
     apiService.getToken().then((t) => { tokenRef.current = t; });
@@ -162,6 +166,7 @@ export function useChat(sessionId: string, userId: string) {
         if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
         flushBuffer();
         setCanRetry(false);
+        lastErrorRef.current = false;
 
         // SSE final event carries `response`; legacy WS used `fullText`.
         const fullText = (event.fullText ?? event.response) as string | undefined;
@@ -217,6 +222,7 @@ export function useChat(sessionId: string, userId: string) {
           { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${errMsg}`, timestamp: new Date() },
         ]);
         setCanRetry(true);
+        lastErrorRef.current = true;
         break;
       }
     }
@@ -260,6 +266,60 @@ export function useChat(sessionId: string, userId: string) {
     };
   }, [sessionId, stopTypewriter]);
 
+  // AppState recovery — when the app returns to foreground after an iOS
+  // backgrounding has killed the SSE connection mid-stream, the backend run
+  // continues server-side (see fc-agent.controller.ts SSE endpoint) and the
+  // final assistant message is persisted. Here we detect the case (last send
+  // ended with ⚠️) and pull the persisted message in, replacing the error.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (state) => {
+      if (state !== 'active') return;
+      if (!lastErrorRef.current || !sessionIdRef.current) return;
+
+      const sid = sessionIdRef.current;
+      // Backend may still be finishing — poll a few times with backoff.
+      const DELAYS = [1500, 3000, 5000];
+      for (const delay of DELAYS) {
+        await new Promise((r) => setTimeout(r, delay));
+        if (!lastErrorRef.current || sessionIdRef.current !== sid) return; // already recovered or session changed
+        try {
+          const token = await apiService.getToken();
+          if (!token) return;
+          const raw = await apiService.getSessionMessages(token, sid);
+          if (sessionIdRef.current !== sid) return;
+          const lastBackend = [...raw].reverse().find((m: any) => m.role === 'assistant' && m.content && !String(m.content).startsWith('⚠️'));
+          if (!lastBackend) continue; // not ready yet, try next delay
+
+          // Recover: remove the ⚠️ error message and inject the real response.
+          setMessages((prev) => {
+            const cleaned = prev.filter((m) => !(m.role === 'assistant' && m.content.startsWith('⚠️')));
+            // Avoid duplicating if we somehow already have it
+            const already = cleaned.find((m) => m.content === lastBackend.content && m.role === 'assistant');
+            if (already) return cleaned;
+            return [
+              ...cleaned,
+              {
+                id: lastBackend.id || `recovered-${Date.now()}`,
+                role: 'assistant' as const,
+                content: lastBackend.content,
+                timestamp: new Date(lastBackend.created_at || lastBackend.createdAt || Date.now()),
+              },
+            ];
+          });
+          setCanRetry(false);
+          setIsTyping(false);
+          setThinkingText('');
+          setToolCalls([]);
+          lastErrorRef.current = false;
+          return;
+        } catch {
+          // network still down — try next delay
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   // Send a message and consume the SSE stream (single HTTP connection)
   const sendMessage = useCallback(
     async (text: string, media?: MediaAttachment[], model?: string | null) => {
@@ -277,6 +337,7 @@ export function useChat(sessionId: string, userId: string) {
       setThinkingText('Flow démarre...');
       setCanRetry(false);
       doneProcessedRef.current = false;
+      lastErrorRef.current = false;
       bufferRef.current = '';
       streamingIdRef.current = null;
       lastUserMsgRef.current = { text, media: media ?? undefined, model };
@@ -339,6 +400,7 @@ export function useChat(sessionId: string, userId: string) {
           ]);
         }
         setCanRetry(true);
+        lastErrorRef.current = true;
       } finally {
         if (abortRef.current === controller) abortRef.current = null;
       }
@@ -354,6 +416,7 @@ export function useChat(sessionId: string, userId: string) {
     if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
     flushBuffer();
     doneProcessedRef.current = true;
+    lastErrorRef.current = false; // user-initiated, not an error to recover
     setIsTyping(false);
     setThinkingText('');
     setToolCalls([]);
@@ -368,6 +431,7 @@ export function useChat(sessionId: string, userId: string) {
   const retry = useCallback(() => {
     if (!lastUserMsgRef.current) return;
     setCanRetry(false);
+    lastErrorRef.current = false;
     // Remove the error message before retrying
     setMessages((prev) => {
       const last = prev[prev.length - 1];
