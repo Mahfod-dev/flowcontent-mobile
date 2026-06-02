@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { Message } from '../types';
 import { useColors } from '../contexts/ThemeContext';
+import { safeOpenURL } from '../utils/safeOpenURL';
 import { t } from '../i18n';
 import { ColorPalette, darkColors, getMarkdownTheme, radii, spacing } from '../theme';
 
@@ -25,7 +26,13 @@ function sanitizeMarkdown(text: string): string {
     .replace(/\[([^\]]+)\](?!\(|\[)/g, '$1');
 }
 
-const handleLinkPress = (_url: string) => true;
+// AUDIT B10: links inside agent responses now actually open (via safeOpenURL
+// which whitelists http/https). Returning `false` tells the library we
+// handled the press ourselves so it doesn't try its default Linking.openURL.
+const handleLinkPress = (url: string) => {
+  safeOpenURL(url);
+  return false;
+};
 
 // --- Style factories ---
 

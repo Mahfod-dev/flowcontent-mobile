@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useColors } from '../contexts/ThemeContext';
 import { t } from '../i18n';
 import { apiService } from '../services/api';
+import { safeOpenURL } from '../utils/safeOpenURL';
 import { AppNotification } from '../types';
 import { ColorPalette } from '../theme';
 import { commonStyles, getNotificationMarkdownTheme, radii, spacing } from '../theme';
@@ -104,7 +105,10 @@ export function NotificationsScreen({ onBack }: Props) {
           <Text style={styles.cardTime}>{timeAgo(item.created_at)}</Text>
         </View>
         <View style={styles.markdownWrap}>
-          <Markdown style={mdTheme}>{item.message}</Markdown>
+          <Markdown
+            style={mdTheme}
+            onLinkPress={(url) => { safeOpenURL(url); return false; }}
+          >{item.message}</Markdown>
         </View>
         <View style={styles.cardFooter}>
           <Text style={styles.cardCategory}>{item.category}</Text>
