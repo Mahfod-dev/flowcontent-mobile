@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Updates from 'expo-updates';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Animated,
@@ -55,6 +56,11 @@ function AppContent() {
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const drawerOpenRef = useRef(false);
+  // AUDIT P0-8 — respect the system "Reduce Motion" accessibility setting:
+  // animations run with duration 0 when it's on. Lazy-read via ref so we
+  // don't have to recreate PanResponder / callbacks when the user toggles it.
+  const reduceMotionRef = useRef(false);
+  const dur = useCallback((ms: number) => (reduceMotionRef.current ? 0 : ms), []);
   const { isDark, colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -63,6 +69,21 @@ function AppContent() {
     AsyncStorage.getItem(ONBOARDING_DONE_KEY).then((v) => {
       setShowOnboarding(v !== 'true');
     });
+  }, []);
+
+  // Track the system "Reduce Motion" setting (a11y)
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled?.().then((v) => {
+      if (mounted) reduceMotionRef.current = !!v;
+    }).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.('reduceMotionChanged', (v) => {
+      reduceMotionRef.current = !!v;
+    });
+    return () => {
+      mounted = false;
+      sub?.remove?.();
+    };
   }, []);
 
   // Biometric lock on app start (when session is still active)
@@ -203,34 +224,34 @@ function AppContent() {
     Animated.parallel([
       Animated.timing(drawerAnim, {
         toValue: 0,
-        duration: 250,
+        duration: dur(250),
         useNativeDriver: true,
       }),
       Animated.timing(overlayAnim, {
         toValue: 1,
-        duration: 250,
+        duration: dur(250),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [drawerAnim, overlayAnim]);
+  }, [drawerAnim, overlayAnim, dur]);
 
   const closeDrawer = useCallback(() => {
     Animated.parallel([
       Animated.timing(drawerAnim, {
         toValue: -DRAWER_WIDTH,
-        duration: 200,
+        duration: dur(200),
         useNativeDriver: true,
       }),
       Animated.timing(overlayAnim, {
         toValue: 0,
-        duration: 200,
+        duration: dur(200),
         useNativeDriver: true,
       }),
     ]).start(() => {
       setDrawerOpen(false);
       drawerOpenRef.current = false;
     });
-  }, [drawerAnim, overlayAnim]);
+  }, [drawerAnim, overlayAnim, dur]);
 
   // Edge pan gesture to open drawer by swiping from left edge
   const edgePanResponder = useRef(
@@ -252,17 +273,18 @@ function AppContent() {
         }
       },
       onPanResponderRelease: (_, gs) => {
+        const d = reduceMotionRef.current ? 0 : 200;
         if (gs.dx > DRAWER_WIDTH / 3 || gs.vx > 0.5) {
           setDrawerOpen(true);
           drawerOpenRef.current = true;
           Animated.parallel([
-            Animated.timing(drawerAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-            Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+            Animated.timing(drawerAnim, { toValue: 0, duration: d, useNativeDriver: true }),
+            Animated.timing(overlayAnim, { toValue: 1, duration: d, useNativeDriver: true }),
           ]).start();
         } else {
           Animated.parallel([
-            Animated.timing(drawerAnim, { toValue: -DRAWER_WIDTH, duration: 200, useNativeDriver: true }),
-            Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(drawerAnim, { toValue: -DRAWER_WIDTH, duration: d, useNativeDriver: true }),
+            Animated.timing(overlayAnim, { toValue: 0, duration: d, useNativeDriver: true }),
           ]).start();
         }
       },
