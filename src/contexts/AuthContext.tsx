@@ -1,10 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { apiService } from '../services/api';
 import { socketService } from '../services/socket';
 import { clearBiometricCredentials } from '../hooks/useBiometric';
+import { useAppStateChange } from '../hooks/useAppForeground';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -114,32 +115,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const backgroundTimestamp = useRef<number | null>(null);
   const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
-  // Reconnect socket + re-join session when app comes back to foreground
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'background' || state === 'inactive') {
-        backgroundTimestamp.current = Date.now();
-      } else if (state === 'active' && user?.token) {
-        // Check session timeout
-        if (backgroundTimestamp.current && Date.now() - backgroundTimestamp.current > SESSION_TIMEOUT_MS) {
-          backgroundTimestamp.current = null;
-          Alert.alert('Session expirée', 'Vous avez été déconnecté après 30 minutes d\'inactivité.', [
-            { text: 'OK', onPress: logout },
-          ]);
-          return;
-        }
-        backgroundTimestamp.current = null;
+  // Reconnect socket + re-join session when app comes back to foreground.
+  // Uses the centralized AppState dispatcher (AUDIT P0-7) so we share a
+  // single underlying subscription with useChat and UpgradeScreen.
+  const onAppStateChange = useCallback((state: string) => {
+    if (state === 'background' || state === 'inactive') {
+      backgroundTimestamp.current = Date.now();
+      return;
+    }
+    if (state !== 'active' || !user?.token) return;
 
-        const wasDisconnected = !socketService.isConnected();
-        if (wasDisconnected) {
-          socketService.connect(user.token);
-        }
-        // FIX BUG #9: Use async rejoin with retry — handles reconnection delay
-        socketService.rejoinCurrentSession();
-      }
-    });
-    return () => subscription.remove();
+    // Check session timeout
+    if (backgroundTimestamp.current && Date.now() - backgroundTimestamp.current > SESSION_TIMEOUT_MS) {
+      backgroundTimestamp.current = null;
+      Alert.alert('Session expirée', 'Vous avez été déconnecté après 30 minutes d\'inactivité.', [
+        { text: 'OK', onPress: logout },
+      ]);
+      return;
+    }
+    backgroundTimestamp.current = null;
+
+    if (!socketService.isConnected()) {
+      socketService.connect(user.token);
+    }
+    // Async rejoin with retry — handles reconnection delay
+    socketService.rejoinCurrentSession();
   }, [user?.token, logout]);
+  useAppStateChange(onAppStateChange);
 
   const login = async (email: string, password: string) => {
     const data = await apiService.login(email, password);

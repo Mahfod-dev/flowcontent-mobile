@@ -20,7 +20,7 @@ Convention :
 | P0-4 | `app.json` Android | Perms `READ_MEDIA_*` absentes → crash Android 13+ | ✅ Batch 2 |
 | P0-5 | `useBiometric.ts` | Password stocké en clair dans SecureStore | ✅ Batch 1 (`requireAuthentication: true` + migration v2) |
 | P0-6 | `AuthContext.tsx` | `logout()` ne nettoie pas les credentials biométriques | ✅ Batch 1 |
-| P0-7 | `AppState` listeners | 3 listeners indépendants firent à 'active' sans coordination | ⏳ |
+| P0-7 | `AppState` listeners | 3 listeners indépendants firent à 'active' sans coordination | ✅ Batch 3 (`useAppForeground` + `useAppStateChange`) |
 | P0-8 | App.tsx animations | `AccessibilityInfo.isReduceMotionEnabled` jamais consulté | ✅ Batch 2 |
 | P0-9 | `ChatScreen.tsx` input | `insets.bottom` manquant → bouton sur home indicator | ❌ Faux positif — `SafeAreaView` pad déjà `insets.bottom` |
 | P0-10 | `ChatScreen.tsx` | `keyboardVerticalOffset={0}` cache l'input sous le clavier | ✅ Batch 2 |

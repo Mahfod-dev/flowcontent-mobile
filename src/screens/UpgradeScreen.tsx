@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  AppState,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useColors } from '../contexts/ThemeContext';
+import { useAppForeground } from '../hooks/useAppForeground';
 import { t } from '../i18n';
 import { apiService } from '../services/api';
 import { CreditPack, CreditTransaction, CurrentSubscription, SubscriptionPlan } from '../types';
@@ -59,17 +59,9 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Auto-refresh when returning from Stripe (Safari)
-  const appState = useRef(AppState.currentState);
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (nextState) => {
-      if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        loadData();
-      }
-      appState.current = nextState;
-    });
-    return () => sub.remove();
-  }, [loadData]);
+  // Auto-refresh when returning from Stripe (Safari). Uses the centralized
+  // AppState dispatcher (AUDIT P0-7) — one subscription shared across screens.
+  useAppForeground(loadData);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
