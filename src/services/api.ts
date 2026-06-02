@@ -920,7 +920,9 @@ export const apiService = {
     _loggedOut = false; // Reset logout flag on new login
     await SecureStore.setItemAsync('fc_token', token);
     // Clean up legacy plaintext token from AsyncStorage (migration)
-    AsyncStorage.removeItem('fc_token').catch(() => {});
+    AsyncStorage.removeItem('fc_token').catch((err) => {
+      if (__DEV__) console.warn('[api] legacy AsyncStorage cleanup failed:', err);
+    });
   },
 
   async getToken(): Promise<string | null> {
@@ -931,7 +933,9 @@ export const apiService = {
     if (legacy) {
       // Migrate to secure store
       await SecureStore.setItemAsync('fc_token', legacy);
-      AsyncStorage.removeItem('fc_token').catch(() => {});
+      AsyncStorage.removeItem('fc_token').catch((err) => {
+      if (__DEV__) console.warn('[api] legacy AsyncStorage cleanup failed:', err);
+    });
       return legacy;
     }
     return null;
@@ -945,7 +949,9 @@ export const apiService = {
     _loggedOut = true; // Prevent stale refresh callbacks
     await SecureStore.deleteItemAsync('fc_token');
     await SecureStore.deleteItemAsync('fc_refresh_token');
-    AsyncStorage.removeItem('fc_token').catch(() => {});
+    AsyncStorage.removeItem('fc_token').catch((err) => {
+      if (__DEV__) console.warn('[api] legacy AsyncStorage cleanup failed:', err);
+    });
   },
 
   async revokeRefreshToken(refreshToken: string) {

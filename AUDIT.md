@@ -63,9 +63,9 @@ Convention :
 - `SkillsScreen.tsx:480` : `ScrollView horizontal` → `FlatList horizontal`
 - ~~A11y : `accessibilityHint` Sidebar footer, `Skeleton` role progressbar,
   `lineHeight` code blocks~~ ✅ Batch 9
-- `markdown onLinkPress` → `safeOpenURL`
-- `expo-speech-recognition` : `^` → `~`
-- `api.ts:857` : log au cleanup AsyncStorage legacy
+- ~~`markdown onLinkPress` → `safeOpenURL`~~ ✅ Batch 10 (MessageBubble + NotificationsScreen)
+- ~~`expo-speech-recognition` : `^` → `~`~~ ✅ Batch 10
+- ~~`api.ts:857` : log au cleanup AsyncStorage legacy~~ ✅ Batch 10 (gated `__DEV__`)
 
 ---
 
