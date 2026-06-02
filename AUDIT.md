@@ -50,11 +50,11 @@ Convention :
 - ~~`EXPO_PUBLIC_EAS_PROJECT_ID` manquant en `.env`~~ ✅ Batch 6
 
 ### UI
-- `ChatScreen.tsx` FlatList : `onContentSizeChange` manquant pour auto-scroll
-- `MessageBubble.tsx:394` : hitSlop trop petit (recommandé Apple ≥ 44pt)
-- `SkillsScreen.tsx` (1351 l) : refacto en 3 fichiers
-- `Sidebar.tsx` SwipeableRow : flag `isAnimating`
-- App.tsx : pas de `BackHandler` Android
+- ~~`ChatScreen.tsx` FlatList : `onContentSizeChange` manquant pour auto-scroll~~ ✅ Batch 7
+- ~~`MessageBubble.tsx:394` : hitSlop trop petit (recommandé Apple ≥ 44pt)~~ ✅ Batch 7 (12pt → ~45pt total)
+- `SkillsScreen.tsx` (1351 l) : refacto en 3 fichiers — hors-scope de l'audit, à planifier séparément
+- ~~`Sidebar.tsx` SwipeableRow : flag `isAnimating`~~ ✅ Batch 7
+- ~~App.tsx : pas de `BackHandler` Android~~ ✅ Batch 7
 
 ## P2 — Polish / perf
 
