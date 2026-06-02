@@ -7,7 +7,10 @@ let currentSessionId: string | null = null;
 let currentToken: string | null = null;
 let isConnecting = false;
 let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
-const HEARTBEAT_TIMEOUT_MS = 300_000; // 5 min without any event → force reconnect
+// 2 min without any event → force reconnect. 5 min was too lenient — a wedged
+// socket on flaky mobile networks would let the user wait 5 minutes before
+// seeing fresh notifs/messages (AUDIT B4).
+const HEARTBEAT_TIMEOUT_MS = 120_000;
 
 // Persistent listener registries — survive socket recreation
 const streamListeners = new Set<(event: any) => void>();

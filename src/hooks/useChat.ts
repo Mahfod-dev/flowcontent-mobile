@@ -262,6 +262,10 @@ export function useChat(sessionId: string, userId: string) {
       bufferRef.current = '';
       streamingIdRef.current = null;
       doneProcessedRef.current = false;
+      // AUDIT B4: a prior session's error must not leak into the new one's
+      // AppState recovery — otherwise foregrounding session B would chase
+      // an error that belonged to session A.
+      lastErrorRef.current = false;
       if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
     };
   }, [sessionId, stopTypewriter]);

@@ -28,14 +28,14 @@ Convention :
 ## P1 — Qualité prod
 
 ### Chat / réseau
-- `useChat.ts` : `lastErrorRef` non reset au changement de session
-- `api.ts:81` (`parseSseFrame`) : erreurs JSON silencieuses
-- `api.ts:34` (`fetchWithTimeout`) : retry sur AbortError (annulation utilisateur)
-- `api.ts:389` : message d'erreur HTTP vide quand body non-JSON
-- `socket.ts:10` : heartbeat 5 min trop long → 2-3 min
-- `socket.ts:36` : `removeAllListeners` avant `attachListenersToSocket`
-- `ChatScreen.tsx:128` : `pendingMessage` ignore `sessionId` dans deps
-- `api.ts:118` : refresh token rotation — lock persistant si serveur invalide à l'usage
+- ~~`useChat.ts` : `lastErrorRef` non reset au changement de session~~ ✅ Batch 4
+- ~~`api.ts:81` (`parseSseFrame`) : erreurs JSON silencieuses~~ ✅ Batch 4 (warn __DEV__)
+- ~~`api.ts:34` (`fetchWithTimeout`) : retry sur AbortError (annulation utilisateur)~~ ✅ Batch 4
+- ~~`api.ts:389` : message d'erreur HTTP vide quand body non-JSON~~ ✅ Batch 4
+- ~~`socket.ts:10` : heartbeat 5 min trop long → 2-3 min~~ ✅ Batch 4 (2 min)
+- `socket.ts:36` : `removeAllListeners` avant `attachListenersToSocket` (Batch 5)
+- ~~`ChatScreen.tsx:128` : `pendingMessage` ignore `sessionId` dans deps~~ ✅ Batch 4
+- `api.ts:118` : refresh token rotation — lock persistant si serveur invalide à l'usage (Batch 5)
 
 ### Auth / sécurité
 - `api.ts:12` : `decodeJwtPayload` — commentaire « info-only, never authz »
