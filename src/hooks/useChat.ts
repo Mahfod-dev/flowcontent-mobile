@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
 import { apiService } from '../services/api';
+import { useAppForeground } from './useAppForeground';
 import { MediaAttachment, Message, ToolCall } from '../types';
 
 // Typewriter speed: characters per chunk & interval (used only for the
@@ -271,54 +271,51 @@ export function useChat(sessionId: string, userId: string) {
   // continues server-side (see fc-agent.controller.ts SSE endpoint) and the
   // final assistant message is persisted. Here we detect the case (last send
   // ended with ⚠️) and pull the persisted message in, replacing the error.
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', async (state) => {
-      if (state !== 'active') return;
-      if (!lastErrorRef.current || !sessionIdRef.current) return;
+  const onForeground = useCallback(async () => {
+    if (!lastErrorRef.current || !sessionIdRef.current) return;
 
-      const sid = sessionIdRef.current;
-      // Backend may still be finishing — poll a few times with backoff.
-      const DELAYS = [1500, 3000, 5000];
-      for (const delay of DELAYS) {
-        await new Promise((r) => setTimeout(r, delay));
-        if (!lastErrorRef.current || sessionIdRef.current !== sid) return; // already recovered or session changed
-        try {
-          const token = await apiService.getToken();
-          if (!token) return;
-          const raw = await apiService.getSessionMessages(token, sid);
-          if (sessionIdRef.current !== sid) return;
-          const lastBackend = [...raw].reverse().find((m: any) => m.role === 'assistant' && m.content && !String(m.content).startsWith('⚠️'));
-          if (!lastBackend) continue; // not ready yet, try next delay
+    const sid = sessionIdRef.current;
+    // Backend may still be finishing — poll a few times with backoff.
+    const DELAYS = [1500, 3000, 5000];
+    for (const delay of DELAYS) {
+      await new Promise((r) => setTimeout(r, delay));
+      if (!lastErrorRef.current || sessionIdRef.current !== sid) return; // already recovered or session changed
+      try {
+        const token = await apiService.getToken();
+        if (!token) return;
+        const raw = await apiService.getSessionMessages(token, sid);
+        if (sessionIdRef.current !== sid) return;
+        const lastBackend = [...raw].reverse().find((m: any) => m.role === 'assistant' && m.content && !String(m.content).startsWith('⚠️'));
+        if (!lastBackend) continue; // not ready yet, try next delay
 
-          // Recover: remove the ⚠️ error message and inject the real response.
-          setMessages((prev) => {
-            const cleaned = prev.filter((m) => !(m.role === 'assistant' && m.content.startsWith('⚠️')));
-            // Avoid duplicating if we somehow already have it
-            const already = cleaned.find((m) => m.content === lastBackend.content && m.role === 'assistant');
-            if (already) return cleaned;
-            return [
-              ...cleaned,
-              {
-                id: lastBackend.id || `recovered-${Date.now()}`,
-                role: 'assistant' as const,
-                content: lastBackend.content,
-                timestamp: new Date(lastBackend.created_at || lastBackend.createdAt || Date.now()),
-              },
-            ];
-          });
-          setCanRetry(false);
-          setIsTyping(false);
-          setThinkingText('');
-          setToolCalls([]);
-          lastErrorRef.current = false;
-          return;
-        } catch {
-          // network still down — try next delay
-        }
+        // Recover: remove the ⚠️ error message and inject the real response.
+        setMessages((prev) => {
+          const cleaned = prev.filter((m) => !(m.role === 'assistant' && m.content.startsWith('⚠️')));
+          // Avoid duplicating if we somehow already have it
+          const already = cleaned.find((m) => m.content === lastBackend.content && m.role === 'assistant');
+          if (already) return cleaned;
+          return [
+            ...cleaned,
+            {
+              id: lastBackend.id || `recovered-${Date.now()}`,
+              role: 'assistant' as const,
+              content: lastBackend.content,
+              timestamp: new Date(lastBackend.created_at || lastBackend.createdAt || Date.now()),
+            },
+          ];
+        });
+        setCanRetry(false);
+        setIsTyping(false);
+        setThinkingText('');
+        setToolCalls([]);
+        lastErrorRef.current = false;
+        return;
+      } catch {
+        // network still down — try next delay
       }
-    });
-    return () => sub.remove();
+    }
   }, []);
+  useAppForeground(onForeground);
 
   // Send a message and consume the SSE stream (single HTTP connection)
   const sendMessage = useCallback(
