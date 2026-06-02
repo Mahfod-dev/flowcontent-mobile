@@ -44,10 +44,10 @@ Convention :
 - ~~`notifications.ts:55` : push token en AsyncStorage → SecureStore~~ ✅ Batch 5 (+ migration)
 
 ### Build / monitoring
-- `package.json` : `punycode` inutilisé
-- Sentry référencé mais jamais initialisé
-- `console.*` non gardés `__DEV__`
-- `EXPO_PUBLIC_EAS_PROJECT_ID` manquant en `.env`
+- ~~`package.json` : `punycode` inutilisé~~ ✅ Batch 6
+- ~~Sentry référencé mais jamais initialisé~~ ✅ Batch 6 (mention nettoyée — monitoring à brancher correctement plus tard si besoin)
+- ~~`console.*` non gardés `__DEV__`~~ ✅ Batch 6 (babel-plugin-transform-remove-console en prod)
+- ~~`EXPO_PUBLIC_EAS_PROJECT_ID` manquant en `.env`~~ ✅ Batch 6
 
 ### UI
 - `ChatScreen.tsx` FlatList : `onContentSizeChange` manquant pour auto-scroll
