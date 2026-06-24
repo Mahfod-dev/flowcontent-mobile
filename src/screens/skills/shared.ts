@@ -60,6 +60,7 @@ export const TOOL_DESC_FR: Record<string, string> = {
   dispatch_task: 'Delegation de taches a des agents specialises',
   keyword_research: 'Recherche de mots-cles SEO avec volumes',
   generate_pptx: 'Creation de presentations PowerPoint',
+  generate_designed_document: 'Documents designes en PDF — presentations & ebooks (12 themes)',
   generate_xlsx: 'Creation de tableurs Excel',
   generate_docx: 'Creation de documents Word',
   backend_api: 'Appel aux APIs FlowContent',
@@ -92,6 +93,7 @@ export function getToolPrompt(tool: AgentTool): string {
   // Generate smart suggestions based on common tools
   const prompts: Record<string, string> = {
     generate_pptx: 'Crée une présentation PowerPoint sur [mon sujet]',
+    generate_designed_document: 'Crée une présentation designée sur [mon sujet], thème aurora',
     generate_xlsx: 'Crée un tableau Excel avec [mes données]',
     generate_docx: 'Crée un document Word sur [mon sujet]',
     search_web: 'Recherche sur le web : [ma question]',
