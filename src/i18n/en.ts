@@ -132,6 +132,28 @@ export default {
   uploadHint: 'Upload files via chat to find them here.',
   deleteFile: 'Delete file',
 
+  // Designed documents
+  designedDocs: 'Designed documents',
+  designedDocsHint: 'Generate a polished presentation or ebook from a simple topic.',
+  ddTopic: 'Topic',
+  ddTopicPlaceholder: 'e.g. 2026 product launch strategy',
+  ddTitle: 'Title (optional)',
+  ddTitlePlaceholder: 'Leave empty to generate automatically',
+  ddFormat: 'Format',
+  ddDeck: 'Presentation',
+  ddEbook: 'Ebook',
+  ddTheme: 'Theme',
+  ddGenerate: 'Generate',
+  ddGenerating: 'Generating… (~30-45s)',
+  ddCost: '%{cost} credits',
+  ddResultTitle: 'Document ready',
+  ddOpenPdf: 'Open PDF',
+  ddPagesCount: '%{count} pages',
+  ddHistory: 'History',
+  ddNoHistory: 'No documents generated yet.',
+  ddTopicTooShort: 'Topic must be at least 3 characters.',
+  ddGenerationFailed: 'Generation failed. Please try again.',
+
   // Upgrade
   upgrade: 'Subscription',
 

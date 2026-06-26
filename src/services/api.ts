@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, MediaAttachment, MediaFile, NangoConnection, NangoProvider, Session, Skill, SubscriptionPlan } from '../types';
+import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, DesignedDocumentHistoryItem, DesignedDocumentResult, DesignedTheme, MediaAttachment, MediaFile, NangoConnection, NangoProvider, Session, Skill, SubscriptionPlan } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
@@ -184,7 +184,7 @@ async function tryRefreshToken(): Promise<string | null> {
   return _refreshPromise;
 }
 
-async function authFetch(url: string, token: string, init?: RequestInit, critical = true): Promise<Response> {
+async function authFetch(url: string, token: string, init?: RequestInit, critical = true, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
   // Proactive refresh: if token expires within 60s, refresh before making the call
   let activeToken = token;
   if (isTokenExpiringSoon(token)) {
@@ -199,7 +199,7 @@ async function authFetch(url: string, token: string, init?: RequestInit, critica
   if (_activeSiteDomain) {
     headers['X-Site-Domain'] = _activeSiteDomain;
   }
-  const res = await fetchWithTimeout(url, { ...init, headers });
+  const res = await fetchWithTimeout(url, { ...init, headers }, timeoutMs);
 
   // Auto-refresh on 401 (fallback if proactive refresh missed)
   if (res.status === 401 && critical) {
@@ -213,7 +213,7 @@ async function authFetch(url: string, token: string, init?: RequestInit, critica
       if (_activeSiteDomain) {
         retryHeaders['X-Site-Domain'] = _activeSiteDomain;
       }
-      return fetchWithTimeout(url, { ...init, headers: retryHeaders });
+      return fetchWithTimeout(url, { ...init, headers: retryHeaders }, timeoutMs);
     }
     // Refresh failed — force logout
     if (_onTokenExpired) _onTokenExpired();
@@ -349,6 +349,47 @@ export const apiService = {
     }
     const data = await safeJson(res);
     return { sessionId: data?.conversation?.id || data?.sessionId || data?.id };
+  },
+
+  // ── Documents designés (hub REST direct, hors chemin agent) ───────────────
+  // GET /themes (public), POST /generate (auth), GET /history (auth).
+  async getDesignedThemes(): Promise<DesignedTheme[]> {
+    const res = await fetchWithTimeout(`${API_URL}/api/designed-documents/themes`);
+    const data = await safeJson(res);
+    return Array.isArray(data?.themes) ? data.themes : [];
+  },
+
+  async generateDesignedDocument(
+    token: string,
+    body: { topic: string; format: 'deck' | 'ebook'; theme: string; title?: string; with_frames?: boolean },
+  ): Promise<DesignedDocumentResult> {
+    // Long-running (Gemini structure + render PDF ~30-45s) → timeout 120s.
+    const res = await authFetch(
+      `${API_URL}/api/designed-documents/generate`,
+      token,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+      true,
+      120_000,
+    );
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    const data = await safeJson(res);
+    if (!res.ok) {
+      const msg = data?.error?.message || data?.message || `Erreur ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  },
+
+  async getDesignedDocumentsHistory(token: string): Promise<DesignedDocumentHistoryItem[]> {
+    const res = await authFetch(`${API_URL}/api/designed-documents/history`, token, undefined, false);
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    return Array.isArray(data?.items) ? data.items : [];
   },
 
   async getSessions(token: string): Promise<Session[]> {

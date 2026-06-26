@@ -214,3 +214,36 @@ export interface AgentTool {
   category: string;
   example?: string;
 }
+
+// ── Documents designés ──────────────────────────────────────────────────────
+export type DesignedFormat = 'deck' | 'ebook';
+
+export interface DesignedTheme {
+  id: string;
+  name: string;
+  bg: string;
+  accent: string;
+  accent2: string;
+}
+
+export interface DesignedDocumentResult {
+  success: boolean;
+  format: DesignedFormat;
+  theme: string;
+  title: string;
+  pages_count: number;
+  size_kb: number;
+  download_url: string | null;
+  frame_urls?: string[];
+}
+
+export interface DesignedDocumentHistoryItem {
+  id: string;
+  title: string;
+  format: DesignedFormat;
+  theme: string;
+  pages_count: number;
+  size_kb: number;
+  created_at: string;
+  download_url: string | null;
+}
