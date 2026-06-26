@@ -407,13 +407,15 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityLabel={notifCount > 0 ? `${t('notifs')}, ${notifCount} ${t('notifs').toLowerCase()}` : t('notifs')}
               accessibilityHint="Ouvre la liste de vos notifications"
             >
-              <Ionicons name="notifications-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('notifs')}</Text>
-              {notifCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{notifCount > 99 ? '99+' : notifCount}</Text>
-                </View>
-              )}
+              <View style={styles.footerActionIconWrap}>
+                <Ionicons name="notifications-outline" size={20} color={colors.textTertiary} />
+                {notifCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{notifCount > 99 ? '99+' : notifCount}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('notifs')}</Text>
             </TouchableOpacity>
           )}
           {onOpenDashboard && (
@@ -426,7 +428,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Affiche vos statistiques d'utilisation"
             >
               <Ionicons name="bar-chart-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('stats')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('stats')}</Text>
             </TouchableOpacity>
           )}
           {onOpenUpgrade && (
@@ -439,7 +441,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Gère ton abonnement et tes crédits"
             >
               <Ionicons name="diamond-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('subscription')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('subscription')}</Text>
             </TouchableOpacity>
           )}
           {onOpenSkills && (
@@ -452,7 +454,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Ouvre les skills et modes de l'agent"
             >
               <Ionicons name="rocket-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('pipelines')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('pipelines')}</Text>
             </TouchableOpacity>
           )}
           {onOpenMedia && (
@@ -465,7 +467,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Ouvre la bibliothèque de tes fichiers"
             >
               <Ionicons name="folder-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('files')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('files')}</Text>
             </TouchableOpacity>
           )}
           {onOpenDesignedDocuments && (
@@ -478,7 +480,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Génère une présentation ou un ebook designé"
             >
               <Ionicons name="color-palette-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('designedDocs')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('designedDocsShort')}</Text>
             </TouchableOpacity>
           )}
           {onOpenOpportunities && (
@@ -491,7 +493,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Consulte tes leads et lance des scans"
             >
               <Ionicons name="flame-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('opportunities')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('opportunities')}</Text>
             </TouchableOpacity>
           )}
           {onOpenProfile && (
@@ -504,7 +506,7 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
               accessibilityHint="Modifie ton profil et tes préférences"
             >
               <Ionicons name="person-outline" size={20} color={colors.textTertiary} />
-              <Text style={styles.footerActionLabel}>{t('profile')}</Text>
+              <Text style={styles.footerActionLabel} numberOfLines={1}>{t('profile')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -743,26 +745,33 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
   footerActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    justifyContent: 'space-between',
+    rowGap: spacing.xs,
     marginBottom: 10,
   },
   footerActionBtn: {
-    position: 'relative',
+    width: '48%',
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    gap: spacing.sm,
+    paddingVertical: 9,
     paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+  },
+  footerActionIconWrap: {
+    position: 'relative',
   },
   footerActionLabel: {
-    color: colors.textTertiary,
-    fontSize: 10,
-    marginTop: 2,
+    color: colors.textSecondary,
+    fontSize: 13,
+    flexShrink: 1,
   },
   badge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -6,
+    right: -10,
     backgroundColor: colors.error,
-    borderRadius: 10,
+    borderRadius: 9,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',

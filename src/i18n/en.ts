@@ -134,6 +134,7 @@ export default {
 
   // Designed documents
   designedDocs: 'Designed documents',
+  designedDocsShort: 'Designed docs',
   designedDocsHint: 'Generate a polished presentation or ebook from a simple topic.',
   ddTopic: 'Topic',
   ddTopicPlaceholder: 'e.g. 2026 product launch strategy',
