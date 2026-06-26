@@ -154,6 +154,31 @@ export default {
   ddTopicTooShort: 'Le sujet doit faire au moins 3 caractères.',
   ddGenerationFailed: 'La génération a échoué. Réessayez.',
 
+  // Opportunités / Leads
+  opportunities: 'Opportunités',
+  oppHotLeads: 'Leads chauds',
+  oppScans: 'Scans',
+  oppNoLeads: 'Aucun lead pour l\'instant.',
+  oppNoScans: 'Aucun scan configuré. Créez-en un depuis le web.',
+  oppRun: 'Lancer',
+  oppRunning: 'Scan en cours…',
+  oppRunDone: '%{found} leads trouvés · %{hot} chauds',
+  oppRunFailed: 'Le scan a échoué.',
+  oppScore: 'Score',
+  oppCall: 'Appeler',
+  oppWebsite: 'Site',
+  oppEmail: 'E-mail',
+  oppReviews: '%{count} avis',
+  oppChangeStatus: 'Changer le statut',
+  oppLastRun: 'Dernier scan',
+  oppNever: 'jamais',
+  oppRadius: '%{km} km',
+  statusNew: 'Nouveau',
+  statusContacted: 'Contacté',
+  statusQualified: 'Qualifié',
+  statusConverted: 'Converti',
+  statusDismissed: 'Écarté',
+
   // Upgrade
   upgrade: 'Abonnement',
 

@@ -39,6 +39,7 @@ interface SidebarProps {
   onOpenMedia?: () => void;
   onOpenSkills?: () => void;
   onOpenDesignedDocuments?: () => void;
+  onOpenOpportunities?: () => void;
 }
 
 function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelete: () => void; onPin: () => void; isPinned: boolean; children: React.ReactNode; colors: ColorPalette }) {
@@ -106,7 +107,7 @@ function SwipeableRow({ onDelete, onPin, isPinned, children, colors }: { onDelet
   );
 }
 
-export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile, onOpenDashboard, onOpenUpgrade, onOpenMedia, onOpenSkills, onOpenDesignedDocuments }: SidebarProps) {
+export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, onOpenNotifications, onOpenProfile, onOpenDashboard, onOpenUpgrade, onOpenMedia, onOpenSkills, onOpenDesignedDocuments, onOpenOpportunities }: SidebarProps) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const colors = useColors();
@@ -478,6 +479,19 @@ export function Sidebar({ activeSessionId, onSelectSession, onNewChat, onClose, 
             >
               <Ionicons name="color-palette-outline" size={20} color={colors.textTertiary} />
               <Text style={styles.footerActionLabel}>{t('designedDocs')}</Text>
+            </TouchableOpacity>
+          )}
+          {onOpenOpportunities && (
+            <TouchableOpacity
+              style={styles.footerActionBtn}
+              onPress={onOpenOpportunities}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('opportunities')}
+              accessibilityHint="Consulte tes leads et lance des scans"
+            >
+              <Ionicons name="flame-outline" size={20} color={colors.textTertiary} />
+              <Text style={styles.footerActionLabel}>{t('opportunities')}</Text>
             </TouchableOpacity>
           )}
           {onOpenProfile && (

@@ -154,6 +154,31 @@ export default {
   ddTopicTooShort: 'Topic must be at least 3 characters.',
   ddGenerationFailed: 'Generation failed. Please try again.',
 
+  // Opportunities / Leads
+  opportunities: 'Opportunities',
+  oppHotLeads: 'Hot leads',
+  oppScans: 'Scans',
+  oppNoLeads: 'No leads yet.',
+  oppNoScans: 'No scan configured. Create one from the web app.',
+  oppRun: 'Run',
+  oppRunning: 'Scanning…',
+  oppRunDone: '%{found} leads found · %{hot} hot',
+  oppRunFailed: 'Scan failed.',
+  oppScore: 'Score',
+  oppCall: 'Call',
+  oppWebsite: 'Site',
+  oppEmail: 'Email',
+  oppReviews: '%{count} reviews',
+  oppChangeStatus: 'Change status',
+  oppLastRun: 'Last scan',
+  oppNever: 'never',
+  oppRadius: '%{km} km',
+  statusNew: 'New',
+  statusContacted: 'Contacted',
+  statusQualified: 'Qualified',
+  statusConverted: 'Converted',
+  statusDismissed: 'Dismissed',
+
   // Upgrade
   upgrade: 'Subscription',
 

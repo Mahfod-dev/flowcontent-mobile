@@ -33,6 +33,7 @@ import { UpgradeScreen } from './src/screens/UpgradeScreen';
 import { MediaScreen } from './src/screens/MediaScreen';
 import { SkillsScreen } from './src/screens/SkillsScreen';
 import { DesignedDocumentsScreen } from './src/screens/DesignedDocumentsScreen';
+import { OpportunitiesScreen } from './src/screens/OpportunitiesScreen';
 import { Sidebar } from './src/components/Sidebar';
 import { useBiometric } from './src/hooks/useBiometric';
 import { useDeepLink } from './src/hooks/useDeepLink';
@@ -48,7 +49,7 @@ function AppContent() {
   const { user, isLoading, logout, login } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media' | 'skills' | 'designed-documents'>('chat');
+  const [activeScreen, setActiveScreen] = useState<'chat' | 'notifications' | 'profile' | 'dashboard' | 'upgrade' | 'media' | 'skills' | 'designed-documents' | 'opportunities'>('chat');
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
@@ -279,6 +280,7 @@ function AppContent() {
   const openMedia = useCallback(() => { closeDrawer(); setActiveScreen('media'); }, [closeDrawer]);
   const openSkills = useCallback(() => { closeDrawer(); setActiveScreen('skills'); }, [closeDrawer]);
   const openDesignedDocuments = useCallback(() => { closeDrawer(); setActiveScreen('designed-documents'); }, [closeDrawer]);
+  const openOpportunities = useCallback(() => { closeDrawer(); setActiveScreen('opportunities'); }, [closeDrawer]);
 
   // Android hardware back button — close drawer first, then return to chat
   // from a secondary screen; otherwise let the OS handle it (= exit).
@@ -444,6 +446,8 @@ function AppContent() {
         <MediaScreen onBack={() => setActiveScreen('chat')} />
       ) : activeScreen === 'designed-documents' ? (
         <DesignedDocumentsScreen onBack={() => setActiveScreen('chat')} />
+      ) : activeScreen === 'opportunities' ? (
+        <OpportunitiesScreen onBack={() => setActiveScreen('chat')} />
       ) : activeScreen === 'skills' ? (
         <SkillsScreen
           onBack={() => setActiveScreen('chat')}
@@ -491,6 +495,7 @@ function AppContent() {
           onOpenMedia={openMedia}
           onOpenSkills={openSkills}
           onOpenDesignedDocuments={openDesignedDocuments}
+          onOpenOpportunities={openOpportunities}
         />
       </Animated.View>
     </View>

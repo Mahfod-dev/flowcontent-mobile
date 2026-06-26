@@ -247,3 +247,61 @@ export interface DesignedDocumentHistoryItem {
   created_at: string;
   download_url: string | null;
 }
+
+// ── Opportunity Engine (leads) ──────────────────────────────────────────────
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'dismissed';
+
+export interface WeightedSignal {
+  type: string;
+  weight: number;
+  source: string;
+  evidence: string;
+}
+
+export interface OpportunityScan {
+  id: string;
+  user_id: string;
+  niche: string;
+  zone_city: string;
+  zone_radius_km: number;
+  is_active: boolean;
+  schedule_hour?: number;
+  max_prospects_per_scan: number;
+  min_score_threshold: number;
+  last_run_at?: string;
+  last_run_status?: 'success' | 'error' | 'running';
+  last_run_leads_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OpportunityLead {
+  id: string;
+  scan_id: string;
+  user_id: string;
+  place_id: string;
+  business_name: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  email?: string;
+  rating?: number;
+  reviews_count?: number;
+  opportunity_score: number;
+  signal_summary: WeightedSignal[];
+  status: LeadStatus;
+  notes?: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  seen_count: number;
+}
+
+export interface ScanRunResult {
+  scanId: string;
+  leadsFound: number;
+  hotLeads: number;
+  avgScore: number;
+  creditsUsed: number;
+  processingTimeMs: number;
+  errors: string[];
+}

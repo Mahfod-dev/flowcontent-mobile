@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, DesignedDocumentHistoryItem, DesignedDocumentResult, DesignedTheme, MediaAttachment, MediaFile, NangoConnection, NangoProvider, Session, Skill, SubscriptionPlan } from '../types';
+import { AgentTool, CreateSkillParams, Credits, CreditPack, CreditTransaction, CurrentSubscription, DashboardData, DesignedDocumentHistoryItem, DesignedDocumentResult, DesignedTheme, LeadStatus, MediaAttachment, MediaFile, NangoConnection, NangoProvider, OpportunityLead, OpportunityScan, ScanRunResult, Session, Skill, SubscriptionPlan } from '../types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://flowbackendapi.store';
 
@@ -390,6 +390,63 @@ export const apiService = {
     if (!res.ok) return [];
     const data = await safeJson(res);
     return Array.isArray(data?.items) ? data.items : [];
+  },
+
+  // ── Opportunity Engine (leads) ────────────────────────────────────────────
+  async getOpportunityScans(token: string): Promise<OpportunityScan[]> {
+    const res = await authFetch(`${API_URL}/api/opportunity-engine/scans`, token, undefined, false);
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    return Array.isArray(data?.data) ? data.data : [];
+  },
+
+  async getHotLeads(token: string, limit = 50): Promise<OpportunityLead[]> {
+    const res = await authFetch(`${API_URL}/api/opportunity-engine/leads/hot?limit=${limit}`, token, undefined, false);
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    return Array.isArray(data?.data) ? data.data : [];
+  },
+
+  async getScanLeads(token: string, scanId: string, limit = 50): Promise<OpportunityLead[]> {
+    const res = await authFetch(`${API_URL}/api/opportunity-engine/scans/${scanId}/leads?limit=${limit}`, token, undefined, false);
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    if (!res.ok) return [];
+    const data = await safeJson(res);
+    return Array.isArray(data?.data) ? data.data : [];
+  },
+
+  async runOpportunityScan(token: string, scanId: string): Promise<ScanRunResult | null> {
+    // Scan = recherche + scraping + scoring → long-running, timeout 120s.
+    const res = await authFetch(
+      `${API_URL}/api/opportunity-engine/scans/${scanId}/run`,
+      token,
+      { method: 'POST' },
+      true,
+      120_000,
+    );
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    const data = await safeJson(res);
+    if (!res.ok) {
+      const msg = data?.error?.message || data?.message || `Erreur ${res.status}`;
+      throw new Error(msg);
+    }
+    return data?.data ?? null;
+  },
+
+  async updateLeadStatus(token: string, leadId: string, status: LeadStatus, notes?: string): Promise<boolean> {
+    const res = await authFetch(
+      `${API_URL}/api/opportunity-engine/leads/${leadId}/status`,
+      token,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, ...(notes ? { notes } : {}) }),
+      },
+    );
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    return res.ok;
   },
 
   async getSessions(token: string): Promise<Session[]> {
