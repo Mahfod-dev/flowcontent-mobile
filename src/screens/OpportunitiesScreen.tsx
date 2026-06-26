@@ -166,19 +166,37 @@ export function OpportunitiesScreen({ onBack }: OpportunitiesScreenProps) {
       {/* Actions de contact */}
       <View style={styles.actionsRow}>
         {item.phone ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => safeOpenTel(item.phone)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => safeOpenTel(item.phone)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('oppCall')} ${item.business_name}`}
+          >
             <Ionicons name="call-outline" size={15} color={colors.accent} />
             <Text style={styles.actionText}>{t('oppCall')}</Text>
           </TouchableOpacity>
         ) : null}
         {item.website ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => safeOpenURL(item.website)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => safeOpenURL(item.website)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('oppWebsite')} ${item.business_name}`}
+          >
             <Ionicons name="globe-outline" size={15} color={colors.accent} />
             <Text style={styles.actionText}>{t('oppWebsite')}</Text>
           </TouchableOpacity>
         ) : null}
         {item.email ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => safeOpenMailto(item.email)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => safeOpenMailto(item.email)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('oppEmail')} ${item.business_name}`}
+          >
             <Ionicons name="mail-outline" size={15} color={colors.accent} />
             <Text style={styles.actionText}>{t('oppEmail')}</Text>
           </TouchableOpacity>
@@ -190,6 +208,8 @@ export function OpportunitiesScreen({ onBack }: OpportunitiesScreenProps) {
         style={[styles.statusChip, { borderColor: statusColor(item.status, colors) }]}
         onPress={() => changeStatus(item)}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('oppChangeStatus')} — ${statusLabel(item.status)}`}
       >
         <View style={[styles.statusDot, { backgroundColor: statusColor(item.status, colors) }]} />
         <Text style={[styles.statusText, { color: statusColor(item.status, colors) }]}>{statusLabel(item.status)}</Text>
@@ -201,7 +221,14 @@ export function OpportunitiesScreen({ onBack }: OpportunitiesScreenProps) {
   const renderScan = ({ item }: { item: OpportunityScan }) => {
     const isRunning = runningScanId === item.id;
     return (
-      <TouchableOpacity style={styles.card} onPress={() => openScanLeads(item)} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => openScanLeads(item)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.niche} — ${item.zone_city}`}
+        accessibilityHint="Affiche les leads de ce scan"
+      >
         <View style={styles.cardTop}>
           <View style={{ flex: 1 }}>
             <Text style={styles.bizName} numberOfLines={1}>{item.niche}</Text>
@@ -220,6 +247,9 @@ export function OpportunitiesScreen({ onBack }: OpportunitiesScreenProps) {
             onPress={() => handleRun(item)}
             disabled={isRunning || !!runningScanId}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isRunning || !!runningScanId, busy: isRunning }}
+            accessibilityLabel={`${t('oppRun')} — ${item.niche}`}
           >
             {isRunning ? (
               <ActivityIndicator size="small" color={colors.white} />
@@ -261,6 +291,8 @@ export function OpportunitiesScreen({ onBack }: OpportunitiesScreenProps) {
               style={[styles.tab, tab === tb && styles.tabActive]}
               onPress={() => setTab(tb)}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: tab === tb }}
             >
               <Text style={[styles.tabText, tab === tb && styles.tabTextActive]}>
                 {tb === 'leads' ? t('oppHotLeads') : t('oppScans')}

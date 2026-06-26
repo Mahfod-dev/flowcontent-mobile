@@ -52,11 +52,13 @@ export function DesignedDocumentsScreen({ onBack }: DesignedDocumentsScreenProps
     try {
       const data = await apiService.getDesignedThemes();
       setThemes(data);
-      if (data.length && !themeId) setThemeId(data[0].id);
+      // Sélectionne le 1er thème par défaut sans dépendre de themeId
+      // (sinon chaque sélection re-déclencherait un fetch).
+      if (data.length) setThemeId((prev) => prev || data[0].id);
     } catch (e) {
       console.error('Failed to load designed themes', e);
     }
-  }, [themeId]);
+  }, []);
 
   const loadHistory = useCallback(async () => {
     if (!user?.token) return;
@@ -102,6 +104,10 @@ export function DesignedDocumentsScreen({ onBack }: DesignedDocumentsScreenProps
     }
     await safeOpenURL(url);
   }, []);
+
+  // Bloque la génération tant que le sujet est trop court ou qu'aucun thème
+  // n'est sélectionné (sinon le DTO backend rejette theme='' avec un 400).
+  const canGenerate = topic.trim().length >= 3 && !!themeId && !generating;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -204,10 +210,13 @@ export function DesignedDocumentsScreen({ onBack }: DesignedDocumentsScreenProps
 
           {/* Générer */}
           <TouchableOpacity
-            style={[styles.generateBtn, generating && styles.generateBtnDisabled]}
+            style={[styles.generateBtn, !canGenerate && styles.generateBtnDisabled]}
             onPress={handleGenerate}
-            disabled={generating}
+            disabled={!canGenerate}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canGenerate, busy: generating }}
+            accessibilityLabel={t('ddGenerate')}
           >
             {generating ? (
               <>
@@ -239,6 +248,8 @@ export function DesignedDocumentsScreen({ onBack }: DesignedDocumentsScreenProps
                 style={styles.openBtn}
                 onPress={() => openUrl(result.download_url)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('ddOpenPdf')}
               >
                 <Ionicons name="document-text-outline" size={18} color={colors.accent} />
                 <Text style={styles.openBtnText}>{t('ddOpenPdf')}</Text>
@@ -257,6 +268,8 @@ export function DesignedDocumentsScreen({ onBack }: DesignedDocumentsScreenProps
                 style={styles.historyRow}
                 onPress={() => openUrl(item.download_url)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.title} — ${t('ddOpenPdf')}`}
               >
                 <Ionicons
                   name={item.format === 'deck' ? 'easel-outline' : 'book-outline'}
