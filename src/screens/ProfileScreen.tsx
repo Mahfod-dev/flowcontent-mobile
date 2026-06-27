@@ -38,7 +38,7 @@ interface Props {
 }
 
 export function ProfileScreen({ onBack }: Props) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, biometricType, toggleEnabled: toggleBiometric } = useBiometric();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const colors = useColors();
@@ -56,6 +56,7 @@ export function ProfileScreen({ onBack }: Props) {
   const [nangoConnections, setNangoConnections] = useState<NangoConnection[]>([]);
   const [nangoProviders, setNangoProviders] = useState<NangoProvider[]>([]);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.token) return;
@@ -121,6 +122,33 @@ export function ProfileScreen({ onBack }: Props) {
     } finally {
       setConnectingProvider(null);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    if (!user?.token) return;
+    Alert.alert(
+      t('deleteAccount'),
+      t('deleteAccountConfirm'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await apiService.deleteAccount(user.token);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              // Compte supprimé côté serveur → on purge la session locale.
+              await logout();
+            } catch (e: any) {
+              setDeleting(false);
+              Alert.alert(t('error'), e?.message || t('deleteAccountError'));
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleDisconnect = async (provider: string) => {
@@ -406,6 +434,30 @@ export function ProfileScreen({ onBack }: Props) {
               })}
             </View>
           )}
+
+          {/* Danger zone — suppression de compte (App Store 5.1.1(v) / RGPD) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('dangerZone')}</Text>
+            <Text style={styles.dangerHint}>{t('deleteAccountHint')}</Text>
+            <TouchableOpacity
+              style={styles.deleteAccountBtn}
+              onPress={handleDeleteAccount}
+              disabled={deleting}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: deleting, busy: deleting }}
+              accessibilityLabel={t('deleteAccount')}
+            >
+              {deleting ? (
+                <ActivityIndicator color={colors.error} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  <Text style={styles.deleteAccountText}>{t('deleteAccount')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -498,5 +550,26 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
   },
   themeChipTextActive: {
     color: colors.white,
+  },
+  dangerHint: {
+    color: colors.textTertiary,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: spacing.md,
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: spacing.md,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  deleteAccountText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

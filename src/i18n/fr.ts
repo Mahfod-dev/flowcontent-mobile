@@ -180,6 +180,13 @@ export default {
   statusConverted: 'Converti',
   statusDismissed: 'Écarté',
 
+  // Suppression de compte
+  dangerZone: 'Zone de danger',
+  deleteAccount: 'Supprimer mon compte',
+  deleteAccountHint: 'Cette action est définitive : votre compte et vos données seront supprimés et ne pourront pas être récupérés.',
+  deleteAccountConfirm: 'Voulez-vous vraiment supprimer définitivement votre compte ? Cette action est irréversible.',
+  deleteAccountError: 'La suppression du compte a échoué. Réessayez.',
+
   // Upgrade
   upgrade: 'Abonnement',
 

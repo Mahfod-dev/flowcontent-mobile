@@ -392,6 +392,18 @@ export const apiService = {
     return Array.isArray(data?.items) ? data.items : [];
   },
 
+  // ── Compte ────────────────────────────────────────────────────────────────
+  async deleteAccount(token: string): Promise<boolean> {
+    const res = await authFetch(`${API_URL}/api/auth/account`, token, { method: 'DELETE' }, false);
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+    if (!res.ok) {
+      const data = await safeJson(res);
+      const msg = data?.error?.message || data?.message || `Erreur ${res.status}`;
+      throw new Error(msg);
+    }
+    return true;
+  },
+
   // ── Opportunity Engine (leads) ────────────────────────────────────────────
   async getOpportunityScans(token: string): Promise<OpportunityScan[]> {
     const res = await authFetch(`${API_URL}/api/opportunity-engine/scans`, token, undefined, false);

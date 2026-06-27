@@ -180,6 +180,13 @@ export default {
   statusConverted: 'Converted',
   statusDismissed: 'Dismissed',
 
+  // Account deletion
+  dangerZone: 'Danger zone',
+  deleteAccount: 'Delete my account',
+  deleteAccountHint: 'This is permanent: your account and data will be deleted and cannot be recovered.',
+  deleteAccountConfirm: 'Are you sure you want to permanently delete your account? This cannot be undone.',
+  deleteAccountError: 'Account deletion failed. Please try again.',
+
   // Upgrade
   upgrade: 'Subscription',
 
