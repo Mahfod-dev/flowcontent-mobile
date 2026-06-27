@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -148,6 +149,12 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
     );
   }, [user?.token, loadData]);
 
+  // App Store Guideline 3.1.1 : interdit de vendre du digital hors IAP, ou
+  // même de linker/mentionner un paiement externe. Sur iOS on masque donc
+  // tout achat (packs, abonnement) et le portail Stripe — l'écran reste en
+  // lecture seule (solde, statut, historique). Android conserve l'achat web.
+  const purchasesHidden = Platform.OS === 'ios';
+
   const progressPercent = subscription
     ? subscription.credits_total > 0
       ? Math.min((subscription.credits_remaining / subscription.credits_total) * 100, 100)
@@ -216,7 +223,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         </View>
 
         {/* Subscription Plans */}
-        {plans.length > 0 && (
+        {!purchasesHidden && plans.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('changePlan')}</Text>
             {plans.map((plan) => {
@@ -263,7 +270,7 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
         )}
 
         {/* Credit Packs */}
-        {packs.length > 0 && (
+        {!purchasesHidden && packs.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('buyCredits')}</Text>
             <View style={styles.packsGrid}>
@@ -316,18 +323,20 @@ export function UpgradeScreen({ onBack }: UpgradeScreenProps) {
 
         {/* Actions */}
         <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.portalBtn}
-            onPress={handlePortal}
-            disabled={actionLoading === 'portal'}
-            activeOpacity={0.7}
-          >
-            {actionLoading === 'portal' ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Text style={styles.portalBtnText}>{t('manageSubscription')}</Text>
-            )}
-          </TouchableOpacity>
+          {!purchasesHidden && (
+            <TouchableOpacity
+              style={styles.portalBtn}
+              onPress={handlePortal}
+              disabled={actionLoading === 'portal'}
+              activeOpacity={0.7}
+            >
+              {actionLoading === 'portal' ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <Text style={styles.portalBtnText}>{t('manageSubscription')}</Text>
+              )}
+            </TouchableOpacity>
+          )}
 
           {subscription?.status === 'active' && !subscription?.cancel_at_period_end && (
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.7}>
