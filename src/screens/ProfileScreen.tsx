@@ -37,6 +37,13 @@ interface Props {
   onBack: () => void;
 }
 
+// Section « Connecter un service » masquée tant que le routing legacy-OAuth
+// vs Nango n'est pas tranché (les deux systèmes coexistent). Le bouton Connect
+// actuel passe par le flow legacy /oauth/initiate, dont la connexion n'est pas
+// vue par l'agent (qui lit Nango) → cul-de-sac. Les connexions EXISTANTES
+// restent affichées et supprimables. Repasser à true une fois le flow décidé.
+const SHOW_CONNECT_SERVICE = false;
+
 export function ProfileScreen({ onBack }: Props) {
   const { user, logout } = useAuth();
   const { isAvailable: biometricAvailable, isEnabled: biometricEnabled, biometricType, toggleEnabled: toggleBiometric } = useBiometric();
@@ -404,7 +411,7 @@ export function ProfileScreen({ onBack }: Props) {
           </View>
 
           {/* Available providers to connect */}
-          {nangoProviders.length > 0 && (
+          {SHOW_CONNECT_SERVICE && nangoProviders.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('connectService')}</Text>
               {nangoProviders.map((provider: any) => {
