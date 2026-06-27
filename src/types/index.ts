@@ -116,7 +116,8 @@ export interface NangoConnection {
   connection_id?: string;
   provider_display_name?: string;
   displayName?: string;
-  connected: boolean;
+  status?: string; // champ réellement renvoyé par getUserConnections (ex. 'ACTIVE')
+  connected?: boolean; // jamais renvoyé par le backend → optionnel (ne pas s'y fier)
   account_name?: string;
   connected_at?: string;
 }

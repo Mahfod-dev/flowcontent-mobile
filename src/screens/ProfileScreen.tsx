@@ -71,9 +71,9 @@ export function ProfileScreen({ onBack }: Props) {
         setProfile({
           name: profileData.name || '',
           email: profileData.email || user.email || '',
-          avatar: profileData.avatar || '',
-          site_name: profileData.site_name || '',
-          phone: profileData.phone || '',
+          avatar: profileData.avatar || profileData.avatar_url || '',
+          site_name: profileData.site_name || profileData.website || '',
+          phone: profileData.phone || profileData.phone_number || '',
         });
       }
       setIntegrations(intData);
@@ -89,10 +89,17 @@ export function ProfileScreen({ onBack }: Props) {
     if (!user?.token) return;
     setSaving(true);
     try {
+      // Le backend /settings/profile lit firstName/lastName/phoneNumber/website
+      // (pas name/site_name/phone). Envoyer ces clés évite l'écrasement du nom.
+      const trimmedName = (profile.name || '').trim();
+      const firstSpace = trimmedName.indexOf(' ');
+      const firstName = firstSpace === -1 ? trimmedName : trimmedName.slice(0, firstSpace);
+      const lastName = firstSpace === -1 ? '' : trimmedName.slice(firstSpace + 1);
       const ok = await apiService.updateProfile(user.token, {
-        name: profile.name,
-        site_name: profile.site_name,
-        phone: profile.phone,
+        firstName,
+        lastName,
+        phoneNumber: profile.phone,
+        website: profile.site_name,
       });
       if (ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -401,7 +408,9 @@ export function ProfileScreen({ onBack }: Props) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('connectService')}</Text>
               {nangoProviders.map((provider: any) => {
-                const pid = provider.id || provider.name;
+                // Le backend OAuth + le matching des connexions Nango utilisent
+                // le NAME du provider, pas son UUID → on priorise provider.name.
+                const pid = provider.name || provider.id;
                 const pName = provider.displayName || provider.display_name || provider.name || pid;
                 const isConnected = connectedProviders.has(pid)
                   || integrations.some((i: any) => (i.provider === pid || i.name === pid) && i.isActive);
@@ -420,12 +429,12 @@ export function ProfileScreen({ onBack }: Props) {
                     ) : (
                       <TouchableOpacity
                         style={styles.connectBtn}
-                        onPress={() => handleConnect(provider.id)}
-                        disabled={connectingProvider === provider.id}
+                        onPress={() => handleConnect(pid)}
+                        disabled={connectingProvider === pid}
                         activeOpacity={0.7}
                       >
                         <Text style={styles.connectText}>
-                          {connectingProvider === provider.id ? '...' : t('connect')}
+                          {connectingProvider === pid ? '...' : t('connect')}
                         </Text>
                       </TouchableOpacity>
                     )}

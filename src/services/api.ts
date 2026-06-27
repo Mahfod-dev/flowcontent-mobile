@@ -643,7 +643,12 @@ export const apiService = {
       if (newToken) {
         res = await doUpload(newToken);
       } else {
+        // Refresh échoué → session expirée. On stoppe ici plutôt que de retomber
+        // dans `if (!res.ok)` avec la 401 obsolète (message d'erreur trompeur).
         if (_onTokenExpired) _onTokenExpired();
+        const e: any = new Error('Session expirée');
+        e.code = 'SESSION_EXPIRED';
+        throw e;
       }
     }
     if (!res.ok) {
@@ -659,7 +664,8 @@ export const apiService = {
     if (!res.ok) return [];
     const data = await safeJson(res);
     if (!data) return [];
-    const list = data.sites ?? data ?? [];
+    // Backend NestJS enveloppe dans { success, data } → lire data.data en priorité.
+    const list = data.data ?? data.sites ?? data ?? [];
     return Array.isArray(list) ? list : [];
   },
 
@@ -831,7 +837,7 @@ export const apiService = {
     const res = await authFetch(`${API_URL}/api/credits/subscriptions/subscribe`, token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ plan_id: planId }),
     }, false);
     if (!res.ok) return null;
     const data = await safeJson(res);
@@ -870,7 +876,7 @@ export const apiService = {
     const res = await authFetch(`${API_URL}/api/credits/purchase`, token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ packId }),
+      body: JSON.stringify({ pack_id: packId }),
     }, false);
     if (!res.ok) return null;
     const data = await safeJson(res);
