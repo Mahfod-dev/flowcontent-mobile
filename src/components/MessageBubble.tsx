@@ -7,7 +7,7 @@ const ResizeMode: any = { CONTAIN: 'contain' };
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import Markdown from 'react-native-markdown-display';
+import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { Message } from '../types';
 import { useColors } from '../contexts/ThemeContext';
 import { safeOpenURL } from '../utils/safeOpenURL';
@@ -33,6 +33,10 @@ const handleLinkPress = (url: string) => {
   safeOpenURL(url);
   return false;
 };
+
+// linkify: true → les URLs BRUTES (https://… collées sans syntaxe markdown)
+// deviennent des tokens lien, donc rendues cliquables par notre rule `link`.
+const markdownItInstance = MarkdownIt({ typographer: true, linkify: true });
 
 // --- Style factories ---
 
@@ -217,6 +221,7 @@ function InlineVideo({ src }: { src: string }) {
 function createRenderRules(
   cbStyles: ReturnType<typeof createCodeBlockStyles>,
   tblStyles: ReturnType<typeof createTableStyles>,
+  colors: ColorPalette,
 ) {
   return {
     fence: (node: any, children: any, parent: any, styles: any) => {
@@ -301,7 +306,18 @@ function createRenderRules(
       if (/\.(mp4|mov|webm)(\?|$)/i.test(href)) {
         return <InlineVideo key={node.key} src={href} />;
       }
-      return null;
+      // Rendre le lien VISIBLE et CLIQUABLE (avant : return null → les URLs
+      // disparaissaient complètement du message).
+      return (
+        <Text
+          key={node.key}
+          style={{ color: colors.accent, textDecorationLine: 'underline' }}
+          onPress={() => safeOpenURL(href)}
+          accessibilityRole="link"
+        >
+          {children}
+        </Text>
+      );
     },
   };
 }
@@ -325,7 +341,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
   const cbStyles = useMemo(() => createCodeBlockStyles(colors), [colors]);
   const tblStyles = useMemo(() => createTableStyles(colors), [colors]);
   const mdTheme = useMemo(() => getMarkdownTheme(colors), [colors]);
-  const renderRules = useMemo(() => createRenderRules(cbStyles, tblStyles), [cbStyles, tblStyles]);
+  const renderRules = useMemo(() => createRenderRules(cbStyles, tblStyles, colors), [cbStyles, tblStyles, colors]);
 
   const displayContent = useMemo(
     () => isUser ? message.content : sanitizeMarkdown(message.content) + (message.isStreaming ? ' \u258C' : ''),
@@ -386,7 +402,7 @@ export const MessageBubble = memo(function MessageBubble({ message, messageIndex
             <Text style={styles.textUser}>{message.content}</Text>
           ) : (
             <View style={styles.markdownWrap}>
-              <Markdown style={mdTheme} rules={renderRules} onLinkPress={handleLinkPress}>
+              <Markdown style={mdTheme} rules={renderRules} onLinkPress={handleLinkPress} markdownit={markdownItInstance}>
                 {displayContent}
               </Markdown>
             </View>
